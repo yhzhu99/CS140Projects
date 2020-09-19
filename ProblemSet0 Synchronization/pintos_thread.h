@@ -44,39 +44,39 @@ __assert(int satisfied, const char *message)
 }
 
 static void
-lock_init(struct lock *lock)
+lock_init(struct lock *lock)	//初始化锁
 {
 	lock->init = LOCK_COND_INIT_MAGIC;
-	pthread_mutex_init(&lock->mutex, NULL);
+	pthread_mutex_init(&lock->mutex, NULL); //初始化互斥锁
 }
 
 static void
-lock_acquire(struct lock *lock)
+lock_acquire(struct lock *lock)	//请求锁
 {
 	__assert(lock->init == LOCK_COND_INIT_MAGIC,
 		"lock_acquire used before lock was initialised!");
-	pthread_mutex_lock(&lock->mutex);
+	pthread_mutex_lock(&lock->mutex);	//上锁
 }
 
 static void
-lock_release(struct lock *lock)
+lock_release(struct lock *lock)	//解锁
 {
 	__assert(lock->init == LOCK_COND_INIT_MAGIC,
 		"lock_release used before lock was initialised!");
 	__assert(pthread_mutex_trylock(&lock->mutex) != 0,
 		"lock_release on unlocked lock!");
-	pthread_mutex_unlock(&lock->mutex);
+	pthread_mutex_unlock(&lock->mutex);	//解锁
 }
 
 static void
-cond_init(struct condition *cond)
+cond_init(struct condition *cond)//初始化条件变量
 {
 	cond->init = LOCK_COND_INIT_MAGIC;
 	pthread_cond_init(&cond->cond, NULL);
 }
 
 static void
-cond_wait(struct condition *cond, struct lock *lock)
+cond_wait(struct condition *cond, struct lock *lock)//阻塞等待
 {
 	// Assert the lock is already held. It should be held
 	// by this caller, so while this simple check won't 
@@ -92,7 +92,7 @@ cond_wait(struct condition *cond, struct lock *lock)
 }
 
 static void
-cond_signal(struct condition *cond, struct lock *lock)
+cond_signal(struct condition *cond, struct lock *lock)//唤醒
 {
 	// See comment in cond_wait().
 	__assert(pthread_mutex_trylock(&lock->mutex) != 0,
@@ -105,7 +105,7 @@ cond_signal(struct condition *cond, struct lock *lock)
 }
 
 static void
-cond_broadcast(struct condition *cond, struct lock *lock)
+cond_broadcast(struct condition *cond, struct lock *lock)//唤醒全部阻塞
 {
 	// See comment in cond_wait().
 	__assert(pthread_mutex_trylock(&lock->mutex) != 0,
