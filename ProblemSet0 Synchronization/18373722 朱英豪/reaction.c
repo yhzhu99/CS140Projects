@@ -6,50 +6,45 @@
 void make_water();
 
 struct reaction {
-	// FILL ME IN
-	struct lock *thread_lock;
-	int h_num;
-	struct condition *new_h;
-	struct condition *cur_h;
+    int needed_h, used_h;
+    struct lock lock;
+    struct condition now_o;
+    struct condition now_h;
 };
 
 void
 reaction_init(struct reaction *reaction)
 {
-	reaction->thread_lock = malloc(sizeof(struct lock));
-	reaction->new_h = malloc(sizeof(struct condition));
-	reaction->cur_h = malloc(sizeof(struct condition));
-	reaction->h_num = 0;
-	lock_init(reaction->thread_lock);
-	cond_init(reaction->new_h);
-	cond_init(reaction->cur_h);
-	// FILL ME IN
+    reaction->needed_h = 0;
+    reaction->used_h = 0;
+    lock_init(&reaction->lock);
+    cond_init(&reaction->now_o);
+    cond_init(&reaction->now_h);
 }
 
 void
 reaction_h(struct reaction *reaction)
 {
-	lock_acquire(reaction->thread_lock);
-	reaction->h_num+=1;
-	cond_signal(reaction->new_h,reaction->thread_lock);
-	cond_wait(reaction->cur_h,reaction->thread_lock);
-	lock_release(reaction->thread_lock);
+    lock_acquire(&reaction->lock);
+    reaction->needed_h++;
+    cond_signal(&reaction->now_h, &reaction->lock);
+    while (reaction->used_h == 0){
+		cond_wait(&reaction->now_o, &reaction->lock);
+	}
+    reaction->used_h--;
+    lock_release(&reaction->lock);
 }
 
 void
 reaction_o(struct reaction *reaction)
 {
-	lock_acquire(reaction->thread_lock);
-	while(reaction->h_num<=1)
-	{
-		cond_wait(reaction->new_h,reaction->thread_lock);
+    lock_acquire(&reaction->lock);
+    while (reaction->needed_h < 2){
+		cond_wait(&reaction->now_h, &reaction->lock);
 	}
-
-	make_water();
-	
-	reaction->h_num-=2;
-	cond_signal(reaction->cur_h,reaction->thread_lock);
-	cond_signal(reaction->cur_h,reaction->thread_lock);
-	lock_release(reaction->thread_lock);
-	// FILL ME IN
+    reaction->used_h += 2;
+    reaction->needed_h -= 2;
+    cond_broadcast(&reaction->now_o, &reaction->lock);
+    make_water();
+    lock_release(&reaction->lock);
 }

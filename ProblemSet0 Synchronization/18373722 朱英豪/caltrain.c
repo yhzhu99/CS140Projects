@@ -1,56 +1,61 @@
 #include "pintos_thread.h"
-struct station
-{
-	struct condition *train_arrived;
-	struct condition *train_loaded;
-	struct lock *thread_lock;
-	int waiting_passenger;
-	int empty_seat;
-	int ready_to_seat;
+struct station {
+    int waiting;
+	int seats;
+	int boarding;
+	int boarded;
+    struct lock lock;
+    struct condition train_available;
+    struct condition train_to_leave;
 };
-void station_init(struct station *station)
+
+void
+station_init(struct station *station)
 {
-	station->train_arrived = malloc(sizeof(struct condition));
-	station->train_loaded = malloc(sizeof(struct condition));
-	station->thread_lock = malloc(sizeof(struct lock));
-	cond_init(station->train_arrived);
-	cond_init(station->train_loaded);
-	lock_init(station->thread_lock);
-	station->ready_to_seat = 0;
-	station->waiting_passenger = 0;
-	station->empty_seat = 0;
-}
-void station_load_train(struct station *station, int count)
-{
-	lock_acquire(station->thread_lock);
-	station->empty_seat = count;
-	while (station->empty_seat > 0 && station->waiting_passenger > 0)
-	{
-		cond_broadcast(station->train_arrived, station->thread_lock);
-		cond_wait(station->train_loaded, station->thread_lock);
-	}
-	lock_release(station->thread_lock);
-	return;
+    station->waiting = 0;
+    station->seats = 0;
+    station->boarding = 0;
+    station->boarded = 0;
+    lock_init(&station->lock);
+    cond_init(&station->train_available);
+    cond_init(&station->train_to_leave);
 }
 
-void station_wait_for_train(struct station *station)
+void
+station_load_train(struct station *station, int count)
 {
-	lock_acquire(station->thread_lock);
-	station->waiting_passenger++;
-	while (station->empty_seat <= station->ready_to_seat)
-	{
-		cond_wait(station->train_arrived, station->thread_lock);
+    lock_acquire(&station->lock);
+    station->boarding = 0;
+    station->boarded = 0;
+    station->seats = count;
+    cond_broadcast(&station->train_available, &station->lock);
+    while (station->boarded < station->seats && (station->waiting > 0 || station->boarding > 0)){
+        cond_wait(&station->train_to_leave, &station->lock);
 	}
-	station->waiting_passenger--;
-	station->ready_to_seat++;
-	lock_release(station->thread_lock);
+    station->seats = 0;
+    station->boarded = 0;
+    lock_release(&station->lock);
 }
 
-void station_on_board(struct station *station)
+void
+station_wait_for_train(struct station *station)
 {
-	lock_acquire(station->thread_lock);
-	station->empty_seat--;
-	station->ready_to_seat--;
-	cond_signal(station->train_loaded, station->thread_lock);
-	lock_release(station->thread_lock);
+    lock_acquire(&station->lock);
+    station->waiting++;
+    while (station->boarding + station->boarded >= station->seats){
+		cond_wait(&station->train_available, &station->lock);
+	}
+    station->boarding++;
+    station->waiting--;
+    lock_release(&station->lock);
+}
+
+void
+station_on_board(struct station *station)
+{
+    lock_acquire(&station->lock);
+    station->boarded++;
+    station->boarding--;
+    cond_signal(&station->train_to_leave, &station->lock);
+    lock_release(&station->lock);
 }
