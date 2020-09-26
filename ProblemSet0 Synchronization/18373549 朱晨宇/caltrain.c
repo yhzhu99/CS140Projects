@@ -4,9 +4,10 @@ struct station
 	struct condition *arriveTrain;
 	struct condition *gotrain;
 	struct lock *someLock;
-	int passengerNum;
-	int emptySeat;
-	int occupiedSeat;
+	int step1;
+	int step2;
+	int step3;
+	int seat;
 };
 void station_init(struct station *station)
 {
@@ -16,20 +17,25 @@ void station_init(struct station *station)
 	cond_init(station->gotrain);
 	station->someLock=malloc(sizeof(struct lock));
 	lock_init(station->someLock);
-	station->occupiedSeat=0;
-	station->passengerNum=0;
-	station->emptySeat=0;
+	station->step1=0;
+	station->step2=0;
+	station->step3=0;
+	station->seat=0;
 	return;
 }
 void station_load_train(struct station *station, int count)
 {
 	lock_acquire(station->someLock);
-	station->emptySeat=count;
-	while (station->passengerNum>=1&&station->emptySeat>=1)
+	station->seat=count;
+	station->step2=0;
+	station->step3=0;
+	cond_broadcast(station->arriveTrain,station->someLock);
+	while (station->step3<station->seat&&(station->step1>0||station->step2>0))
 	{
-		cond_broadcast(station->arriveTrain,station->someLock);
 		cond_wait(station->gotrain,station->someLock);
 	}
+	station->seat=0;
+	station->step3=0;
 	lock_release(station->someLock);
 	return;
 }
@@ -37,11 +43,11 @@ void station_load_train(struct station *station, int count)
 void station_wait_for_train(struct station *station)
 {
 	lock_acquire(station->someLock);
-	station->passengerNum++;
-	while (station->occupiedSeat>=station->emptySeat)
+	station->step1+=1;
+	while (station->step2 + station->step3 >= station->seat)
 		cond_wait(station->arriveTrain,station->someLock);
-	station->passengerNum-=1;
-	station->occupiedSeat+=1;
+	station->step1-=1;
+	station->step2+=1;
 	lock_release(station->someLock);
 	return;
 }
@@ -49,8 +55,8 @@ void station_wait_for_train(struct station *station)
 void station_on_board(struct station *station)
 {
 	lock_acquire(station->someLock);
-	station->occupiedSeat-=1;
-	station->emptySeat-=1;
+	station->step3+=1;
+	station->step2-=1;
 	cond_signal(station->gotrain,station->someLock);
 	lock_release(station->someLock);
 	return;
