@@ -29,6 +29,7 @@ void station_load_train(struct station *station, int count)
 		cond_broadcast(station->train_arrived, station->thread_lock);
 		cond_wait(station->train_loaded, station->thread_lock);
 	}
+	station->empty_seat = 0;
 	lock_release(station->thread_lock);
 	return;
 }
@@ -37,11 +38,10 @@ void station_wait_for_train(struct station *station)
 {
 	lock_acquire(station->thread_lock);
 	station->waiting_passenger++;
-	while (station->empty_seat <= station->ready_to_seat)
+	while (station->empty_seat==0||station->empty_seat<=station->ready_to_seat)
 	{
 		cond_wait(station->train_arrived, station->thread_lock);
 	}
-	station->waiting_passenger--;
 	station->ready_to_seat++;
 	lock_release(station->thread_lock);
 }
@@ -49,6 +49,7 @@ void station_wait_for_train(struct station *station)
 void station_on_board(struct station *station)
 {
 	lock_acquire(station->thread_lock);
+	station->waiting_passenger--;
 	station->empty_seat--;
 	station->ready_to_seat--;
 	cond_signal(station->train_loaded, station->thread_lock);
