@@ -339,6 +339,14 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+void 
+check_blocked_time(struct thread* t, void *aux) {
+  if(t->status == THREAD_BLOCKED && t->ticks_blocked > 0) {
+    t->ticks_blocked--;
+    if(t->ticks_blocked == 0)
+      thread_unblock(t);
+  }
+}
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 

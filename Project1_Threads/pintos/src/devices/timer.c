@@ -89,8 +89,7 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
-
+  if(ticks <= 0)  return;
   ASSERT (intr_get_level () == INTR_ON);
   enum intr_level old_level = intr_disable();
   struct thread* current_thread = thread_current();
@@ -178,6 +177,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  thread_foreach(check_blocked_time, NULL);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
