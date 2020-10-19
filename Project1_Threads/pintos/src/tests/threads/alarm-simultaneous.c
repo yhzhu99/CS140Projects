@@ -83,19 +83,12 @@ sleeper (void *test_)
 
   /* Make sure we're at the beginning of a timer tick. */
   timer_sleep (1);
-  //timer_print_stats();
 
   for (i = 1; i <= test->iterations; i++) 
     {
       int64_t sleep_until = test->start + i * 10;
-
-      /* If the timer_sleep uses busy-waiting, then there will be some differene. */
       timer_sleep (sleep_until - timer_ticks ());
-      timer_print_stats();
-      printf("sleep_until = %d", sleep_until);
       *test->output_pos++ = timer_ticks () - test->start;
-
-      /* put the running thread in the ready_list */
       thread_yield ();
     }
 }

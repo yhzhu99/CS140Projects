@@ -180,7 +180,7 @@ thread_create (const char *name, int priority,
   if (t == NULL)
     return TID_ERROR;
 
-  /* Initialize thread. The Status is BLOCKED */
+  /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
@@ -339,7 +339,6 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-/* My own function */
 void 
 check_blocked_time(struct thread* t, void *aux) {
   if(t->status == THREAD_BLOCKED && t->ticks_blocked > 0) {
