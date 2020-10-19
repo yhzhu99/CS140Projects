@@ -208,6 +208,8 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  if(thread_current()->priority < priority)
+    thread_yield();
 
   return tid;
 }
@@ -354,6 +356,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_yield();
 }
 
 /* Returns the current thread's priority. */
@@ -485,6 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->ori_priority = priority;
   t->magic = THREAD_MAGIC;
   list_insert_ordered(&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
   //list_push_back (&all_list, &t->allelem);
