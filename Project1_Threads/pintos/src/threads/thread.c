@@ -366,6 +366,11 @@ thread_get_priority (void)
   return thread_current ()->priority;
 }
 
+void 
+thread_donate_priority(struct thread* t) {
+  t->priority = thread_current()->priority;
+}
+
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int nice UNUSED) 

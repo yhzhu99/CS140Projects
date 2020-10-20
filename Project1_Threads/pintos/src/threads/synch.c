@@ -192,13 +192,20 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
+  struct thread* cur = thread_current();
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-
+  if(lock->holder != NULL) {
+    cur->lock_waiting = lock;
+    if(lock->holder->priority < cur->priority)
+      thread_donate_priority(lock->holder);
+  }
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  lock->holder = cur;
+  cur->lock_waiting = NULL;
+
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
