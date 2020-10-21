@@ -92,7 +92,8 @@ struct thread
     struct lock* lock_waiting;          /* The lock that have acquired. */ 
     struct list locks;                  /* The list of the locks that this thread is waiting for. */
     struct list_elem allelem;           /* List element for all threads list. */
-
+    int nice;
+    int64_t recent_cpu;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -144,6 +145,10 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+void modify_priority(struct thread* t, void*aux UNUSED);
+void increase_recent_cpu(void);
+void modify_cpu(struct thread* t, void* aux UNUSED);
+void modify_load_avg(void);
 
 void check_blocked_time(struct thread* t, void* aux);
 bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
