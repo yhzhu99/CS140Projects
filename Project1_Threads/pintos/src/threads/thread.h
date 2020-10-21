@@ -146,7 +146,7 @@ int thread_get_load_avg (void);
 
 void check_blocked_time(struct thread* t, void* aux);
 bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-
+bool cond_sema_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 #endif /* threads/thread.h */
 
 
