@@ -353,10 +353,13 @@ check_blocked_time(struct thread* t, void *aux) {
 }
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
-thread_set_priority (int new_priority) 
+thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
-  thread_yield();
+  thread_current ()->ori_priority = new_priority;
+  if(list_empty(&thread_current()->locks) || new_priority > thread_current()->priority){
+    thread_current()->priority = new_priority;
+    thread_yield();
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -494,6 +497,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->ori_priority = priority;
+  list_init(&t->locks);  
   t->magic = THREAD_MAGIC;
   list_insert_ordered(&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
   //list_push_back (&all_list, &t->allelem);

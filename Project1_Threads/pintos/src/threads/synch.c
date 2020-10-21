@@ -183,6 +183,12 @@ lock_init (struct lock *lock)
   sema_init (&lock->semaphore, 1);
 }
 
+/* Compare function in list of a lock */
+bool lock_compare_max_priority (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
+{
+  return list_entry(a,struct lock,elem)->max_priority < list_entry(b,struct lock,elem)->max_priority;
+}
+
 /* Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
    thread.
@@ -199,19 +205,28 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  /*
+/* If there is a thread get the lock, we should record the lock and donate. */
   if(lock->holder != NULL) {
-    cur->lock_waiting = lock;
-    if(lock->holder->priority < cur->priority) {
-      thread_donate_priority(lock->holder);
-      //printf("Thread %s donate the priority to Thread %s\n", lock->holder->name, cur->name);
-    }  
+    thread_current()->lock_waiting = lock;
+    struct lock *llock = lock;
+    while(llock != NULL && thread_current()->priority > llock->max_priority){
+      llock->max_priority = thread_current()->priority;
+      struct list_elem *max_priority_in_locks = list_max(&llock->holder->locks, lock_compare_max_priority, NULL);
+      int maximal = list_entry(max_priority_in_locks, struct lock, elem)->max_priority;
+      if(llock->holder->priority < maximal)
+        llock->holder->priority = maximal;
+      llock = llock->holder->lock_waiting;
+    }
   }
-  */ 
- 
+
+/* Then enter the ready list or sema list. */
   sema_down (&lock->semaphore);
   lock->holder = cur;
-  cur->lock_waiting = NULL;
+  thread_current()->lock_waiting = NULL;
+
+/* The sorted queue make sure the current thread has the max priority is this lock list. */
+  lock->max_priority = thread_current()->priority;
+  list_push_back(&thread_current()->locks, &lock->elem);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -244,11 +259,18 @@ lock_release (struct lock *lock)
 {
   struct thread* cur = thread_current();
   ASSERT (lock != NULL);
-  /* Kernel Panic */
   ASSERT (lock_held_by_current_thread (lock));
-  //if(cur->lock_waiting)
-  //  cur->priority = cur->ori_priority;
-  //printf("THe current->priority is %d and the ori_priority is %d\n", cur->priority, cur->ori_priority);
+
+  list_remove(&lock->elem);
+  int maximal = thread_current()->ori_priority;
+  if(!list_empty(&thread_current()->locks)){
+    struct list_elem *max_priority_in_locks = list_max(&thread_current()->locks,lock_compare_max_priority,NULL);
+    int p = list_entry(max_priority_in_locks,struct lock,elem)->max_priority;
+    if(p > maximal)
+      maximal = p;
+  }
+  thread_current()->priority = maximal;
+
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }

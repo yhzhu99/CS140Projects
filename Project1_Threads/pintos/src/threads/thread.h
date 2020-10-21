@@ -90,6 +90,7 @@ struct thread
     int priority;                       /* Priority. */
     int ori_priority;                   /* The Priority before it is changed. */
     struct lock* lock_waiting;          /* The lock that have acquired. */ 
+    struct list locks;                  /* The list of the locks that this thread is waiting for. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -147,6 +148,7 @@ int thread_get_load_avg (void);
 void check_blocked_time(struct thread* t, void* aux);
 bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool cond_sema_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+bool lock_compare_max_priority (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED);
 #endif /* threads/thread.h */
 
 
