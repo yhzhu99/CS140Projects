@@ -182,7 +182,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
       modify_load_avg();
       thread_foreach(modify_cpu,NULL);
     }
-    if (timer_ticks() % 4 == 0){
+    else if (timer_ticks() % 4 == 0){
       thread_foreach(modify_priority,NULL);
     }
   }
