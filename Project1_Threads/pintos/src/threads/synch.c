@@ -263,9 +263,9 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
   if(!thread_mlfqs) {
-     list_remove(&lock->elem);
+    list_remove(&lock->elem);
     int maximal = thread_current()->ori_priority;
-    if(!list_empty(&thread_current()->locks)){
+    if(!list_empty(&thread_current()->locks)) {
       struct list_elem *max_priority_in_locks = list_max(&thread_current()->locks,lock_compare_max_priority,NULL);
       int p = list_entry(max_priority_in_locks,struct lock,elem)->max_priority;
       if(p > maximal)
