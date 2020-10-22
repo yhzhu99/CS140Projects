@@ -206,7 +206,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
 /* If there is a thread get the lock, we should record the lock and donate. */
-  if(lock->holder != NULL && !thread_mlfqs) {
+  if(lock->holder != NULL) {
     thread_current()->lock_waiting = lock;
     struct lock *llock = lock;
     while(llock != NULL && thread_current()->priority > llock->max_priority){
@@ -222,12 +222,11 @@ lock_acquire (struct lock *lock)
 /* Then enter the ready list or sema list. */
   sema_down (&lock->semaphore);
   lock->holder = cur;
-  if(!thread_mlfqs) {
-    thread_current()->lock_waiting = NULL;
+  
+  thread_current()->lock_waiting = NULL;
 /* The sorted queue make sure the current thread has the max priority is this lock list. */
-    lock->max_priority = thread_current()->priority;
-    list_push_back(&thread_current()->locks, &lock->elem);
-  }
+  lock->max_priority = thread_current()->priority;
+  list_push_back(&thread_current()->locks, &lock->elem);
   
 }
 
