@@ -4,21 +4,25 @@
 
 > Fill in the names and email addresses of your group members.
 
-| 姓名   | 学号     | 占比 |
-| ------ | -------- | ---- |
-| 朱英豪 | 18373722 | 25%  |
-| 施哲纶 | 18373044 | 25%  |
-| 胡鹏飞 | 18373059 | 25%  |
-| 朱晨宇 | 18373549 | 25%  |
+| 姓名   | 学号     | 邮箱         | 占比 |
+| ------ | -------- | ------------ | ---- |
+| 朱英豪 | 18373722 | 18373722@buaa.edu.cn | 25%  |
+| 施哲纶 | 18373044 | 18373044@buaa.edu.cn | 25%  |
+| 胡鹏飞 | 18373059 | 18373059@buaa.edu.cn | 25%  |
+| 朱晨宇 | 18373549 | 18373549@buaa.edu.cn | 25%  |
 
-主要负责内容：
+**主要负责内容：**
 
-- 朱英豪
-- 施哲纶
-- 胡鹏飞
-- 朱晨宇
+| 姓名   | ALARM CLOCK              | PRIORITY SCHEDULING | ADVANCED SCHEDULER |
+| ------ | ------------------------ | ------------------- | ------------------ |
+| 朱英豪 | 需求、思路设计；文档编写 |                     |                    |
+| 施哲纶 | 具体算法实现；文档编写   |                     |                    |
+| 胡鹏飞 | 项目前期调研；理解Pintos |                     |                    |
+| 朱晨宇 | 负责Debug，代码风格检查  |                     |                    |
 
-Github记录：
+**Github记录：**
+
+**样例通过情况：**
 
 (具体谁完成了哪个函数的编写与Debug在代码中也有注释注明，我们的分工基本上是相当平均的)
 
@@ -35,6 +39,10 @@ Github记录：
 2. 原仓周老师PPT中的概念和课上讲解
 
 ## ALARM CLOCK
+
+## 设计思路
+
+拿到题目之后，发现了原先代码的什么问题，我们想到什么方式来解决，我们是大概是怎么解决的...
 
 ### DATA STRUCTURES
 
@@ -61,31 +69,32 @@ Github记录：
 > including the effects of the timer interrupt handler.
 (简述调用timer_sleep()后发生了什么，包括时间中断处理的效果)
 
-**`timer_sleep()`**  
+- `timer_sleep()`  
 
-1. 判断正在运行中的线程需要的睡眠时间是否大于0，是则继续，否则return
+```
+判断正在运行中的线程需要的睡眠时间是否大于0，是则继续，否则return
+禁用中断
+设置当前线程的ticks_blocked为ticks，即保存该线程需要睡眠的时间
+将该线程放入blocked_list队列，并设置状态为THREAD_BLOCKED
+还原线程中断状态
+```
 
-2. 禁用中断
+- `timer_interrupt()`
 
-3. 设置当前线程的ticks_blocked为ticks，即保存该线程需要睡眠的时间
+```
+更新当前系统时间片 
+遍历blocked_list中所有的线程，执行第三步
+该线程的ticks_blocked--
+判断ticks_blocked是否为0，如果是则执行第五步，否则遍历下一个线程，执行第三步
+禁用中断
+将该线程从blocked_list中移除
+将线程放入ready_list队列中，并将status设置为THREAD_READY
+还原中断状态
+遍历下一个线程直至遍历完blocked_list中所有线程
+```
 
-4. 将该线程放入blocked_list队列，并设置状态为THREAD_BLOCKED
+**Effects**
 
-5. 还原线程中断状态
-
-**`timer_interrupt()`**
-
-1. 更新当前系统时间片 
-2. 遍历blocked_list中所有的线程，执行第三步
-3. 该线程的ticks_blocked--
-4. 判断ticks_blocked是否为0，如果是则执行第五步，否则遍历下一个线程，执行第三步
-5. 禁用中断
-6. 将该线程从blocked_list中移除
-8. 将线程放入ready_list队列中，并将status设置为THREAD_READY
-9. 还原中断状态
-10. 遍历下一个线程直至遍历完blocked_list中所有线程
-
-**Effect**
 将此时可以唤醒的程序唤醒，放入准备运行的队列，并且从阻塞队列中移除
 
 > A3: What steps are taken to minimize the amount of time spent in
