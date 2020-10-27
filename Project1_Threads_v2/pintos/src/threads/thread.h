@@ -83,6 +83,7 @@ typedef int tid_t;
 struct thread
   {
     /* Owned by thread.c. */
+    int64_t ticks_blocked; /*阻塞时间*/
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
@@ -91,7 +92,8 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
+    struct list_elem elem;              /* List element. readylist*/
+    struct list_elem bloelem;           /* List element. blockedlist szl */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -117,6 +119,7 @@ typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
 void thread_block (void);
+void thread_sleep_block (void);
 void thread_unblock (struct thread *);
 
 struct thread *thread_current (void);
@@ -129,6 +132,7 @@ void thread_yield (void);
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
+void blocked_thread_foreach (thread_action_func *,void *); // szl
 
 int thread_get_priority (void);
 void thread_set_priority (int);
@@ -137,5 +141,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void blocked_thread_check (struct thread *t, void *aux UNUSED);//szl
 
 #endif /* threads/thread.h */
