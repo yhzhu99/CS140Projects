@@ -46,11 +46,11 @@ Github记录：
 - `struct list_elem bloelem;`
   - List element：在Blocked list中的list element，用来存储被阻塞的线程
 - `void thread_sleep_block (void);`
-  - 把当前运行线程中的元素放入blocked list中，设置线程状态为BLOCKED
+  - 把当前运行中判断为需要睡眠的线程中的元素放入blocked list中，设置线程状态为THREAD_BLOCKED
 - `static struct list blocked_list;`
   - 被阻塞的线程列表：当线程在阻塞（睡眠）过程中会被放入这个列表，在唤醒时会被移除
 - `void blocked_thread_check(struct thread *t, void *aux UNUSED)`
-  - 检查当前time tick是否已睡醒：如果应该在睡眠状态，则继续放在list里，否则移出`blocked_list`
+  - t线程需要的睡眠时间片减一；检查当前t线程是否已睡醒：如果应该在睡眠状态，则继续放在list里，否则移出`blocked_list`
 - `void blocked_thread_foreach(thread_action_func *func, void *aux)`
   - 对所有阻塞线程执行`func`,传递`aux`，必须阻塞中断
 
@@ -61,31 +61,38 @@ Github记录：
 > including the effects of the timer interrupt handler.
 (简述调用timer_sleep()后发生了什么，包括时间中断处理的效果)
 
-In a call to timer_sleep()
-1. The current thread’s sleep_ticks is set to the given sleep ticks plus the 
-current ticks. 
-2. Disable interrupts
-3. The thread is inserted to the sleep list
-4. Block the thread
-5. Reset interrupts level to its old one
- 
-So, in timer interrupt handler,
-1. Check the list to see if any threads need to be waken up
-2. If any, reset the thread’s sleep_ticks
-3. Disable interrupts
-4. Remove it from the sleep list,
-5. Unblock the thread 
-6. Reset interrupts level to its old one
+**`timer_sleep()`**  
 
+1. 判断正在运行中的线程需要的睡眠时间是否大于0，是则继续，否则return
+
+2. 禁用中断
+
+3. 设置当前线程的ticks_blocked为ticks，即保存该线程需要睡眠的时间
+
+4. 将该线程放入blocked_list队列，并设置状态为THREAD_BLOCKED
+
+5. 还原线程中断状态
+
+**`timer_interrupt()`**
+
+1. 更新当前系统时间片 
+2. 遍历blocked_list中所有的线程，执行第三步
+3. 该线程的ticks_blocked--
+4. 判断ticks_blocked是否为0，如果是则执行第五步，否则遍历下一个线程，执行第三步
+5. 禁用中断
+6. 将该线程从blocked_list中移除
+8. 将线程放入ready_list队列中，并将status设置为THREAD_READY
+9. 还原中断状态
+10. 遍历下一个线程直至遍历完blocked_list中所有线程
+
+**Effect**
+将此时可以唤醒的程序唤醒，放入准备运行的队列，并且从阻塞队列中移除
 
 > A3: What steps are taken to minimize the amount of time spent in
 > the timer interrupt handler?
 
-An ordered list which is sorted and inserted by sleep_ticks number is used, 
-so that we can check the list from the beginning and stop whenever the 
-sleep_ticks is larger than the current ticks, which guarantees the later 
-threads in the sleep list don’t need to be checked. By this means, we can 
-minimize the time spent. 
+1. 每次遍历阻塞队列都会将所有被唤醒的线程移除队列，这保证了每次`timer_interrupt()`所遍历的线程都一定是沉睡的，不会有正在运行的线程或者准备运行的线程，节省了遍历的时间。
+2. 在线程结构体中存储了需要沉睡的时间，在一个时间片内遍历所有沉睡的线程的结构体即可，不需要调取线程进行忙等待，大大节省了时间。
 
 ### SYNCHRONIZATION
 
@@ -95,8 +102,8 @@ minimize the time spent.
 ```c
 enum intr_level old_level = intr_disable ();
 list_remove(&t->bloelem); // 从blocked_list中移除
-intr_set_level (old_level);
 thread_unblock(t); // 解锁
+intr_set_level (old_level);
 ```
 
 - 通过以上的原子操作，当中断发生时，禁用对list的操作
@@ -113,7 +120,7 @@ thread_unblock(t); // 解锁
 
 - 避免了忙等待问题，节省资源空间
 - 牺牲空间，节省时间
-  - 我们多开了一个队列，保存阻塞的睡眠线程，使得每一次tick遍历时，只需要遍历睡眠的线程，而不需要遍历所有的线程（可运行的线程和睡眠线程）
+  - 我们多开了一个队列，保存阻塞的睡眠线程，使得每一次tick遍历时，只需要遍历睡眠的线程，而不需要遍历所有的线程（等待运行的线程、正在运行的线程以及睡眠中的线程）
 
 ## PRIORITY SCHEDULING
 

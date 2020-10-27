@@ -112,8 +112,8 @@ blocked_thread_check(struct thread *t, void *aux UNUSED)//szl
   {
     enum intr_level old_level = intr_disable ();
     list_remove(&t->bloelem); //从blocked_list中移除
-    intr_set_level (old_level);
     thread_unblock(t);  //解锁
+    intr_set_level (old_level);
   }
 }
 /* Starts preemptive thread scheduling by enabling interrupts.
