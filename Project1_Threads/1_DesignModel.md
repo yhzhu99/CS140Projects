@@ -1,4 +1,4 @@
-# PROJECT 1: THREADS DESIGN DOCUMENT
+# Threads Design Document
 
 ## GROUP
 

@@ -26,3 +26,11 @@ See the Pintos documentation for details on this project:
 Additional notes and modifications for Project 1:
 
 - A common mistake students make throughout the Pintos projects is to use `malloc` carelessly. If you call `malloc`, you must check the result to make sure the system did not run out of memory (and you must do something reasonable if memory does run out). In addition, you must be sure that any memory you allocate is eventually freed.
+
+我们采用方式二。方式二的评测依据主要是分析文档中分析相关函数的个数和分析质量，也参考源码编译后测试用例的通过数。采用这种方式，除提交能够直接编译并运行的完整项目源代码外，同时提交的分析文档内容包括：
+
+- 小组成员学号姓名及各自在本实验的贡献百分比；
+- 所分析代码通过本实验测试用例的情况；
+- 实验相关函数的调用关系图及其功能说明；
+- 相关数据结构的分析说明；
+- 相关函数流程图的分析说明。
