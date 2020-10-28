@@ -11,7 +11,7 @@
 | 胡鹏飞 | 18373059 | 18373059@buaa.edu.cn | 25%  |
 | 朱晨宇 | 18373549 | 18373549@buaa.edu.cn | 25%  |
 
-**主要负责内容：**
+> 主要负责内容
 
 | 姓名   | ALARM CLOCK              | PRIORITY SCHEDULING | ADVANCED SCHEDULER |
 | ------ | ------------------------ | ------------------- | ------------------ |
@@ -20,11 +20,11 @@
 | 胡鹏飞 | 项目前期调研；理解Pintos |                     |                    |
 | 朱晨宇 | 负责Debug，代码风格检查  |                     |                    |
 
-**Github记录：**
+> Github记录
 
-**样例通过情况：**
+> 样例通过情况
 
-(具体谁完成了哪个函数的编写与Debug在代码中也有注释注明，我们的分工基本上是相当平均的)
+(具体谁完成了哪个函数的编写与Debug在代码中也有注释注明，我们的分工基本上是相当合理且平均的)
 
 ## PRELIMINARIES
 
@@ -38,17 +38,15 @@
 1. 操作系统概念(原书第9版)/(美)Abraham Silberschatz等著
 2. 原仓周老师PPT中的概念和课上讲解
 
-## ALARM CLOCK
+## QUESTION 1: ALARM CLOCK
 
 ### 需求分析
 
-第一部分的任务是
+初始程序中通过忙等待机制来实现`timer_sleep`函数。但是这种忙等待机制的实现方式会过多的占用计算机系统的资源，对于某些资源分配不足的计算机系统（比如本组实验使用的Ubuntu虚拟机），难以通过第一部分的部分测试数据点(比如`alarm_simultaneous/alarm_priority`)。这是因为忙等待通过轮询的方式，在每个时间片将每个线程都放入`running`中运行以判断是否达到睡眠时间，并且将没有达到睡眠时间的线程重新放回`ready_list`中等待下一次的轮询。使用这种忙等待机制/轮询的方法，在每一个时间片中，需要进行太多的工作，以至于在资源分配不足的情况下无法在一个时间片中执行完成本应该在一个时间片中执行完毕的工作。
 
-现在已有的程序中通过忙等待机制来实现timer_sleep函数。但是这种忙等待机制的实现方式会过多的占用计算机系统的资源，对于某些资源分配不足的计算机系统（比如本组实验使用的ubuntu虚拟机），难以通过第一部分的部分测试数据点(比如alarm_simultaneous/alarm_priority)。这是因为忙等待通过轮询的方式，在每个时间片将每个线程都放入running中运行以判断是否达到睡眠时间，并且将没有达到睡眠时间的线程重新放回ready_list中等待下一次的轮询。使用这种忙等待机制/轮询的方法，在每一个时间片中，需要进行太多的工作，以至于在资源分配不足的情况下无法在一个时间片中执行完成本应该在一个时间片中执行完毕的工作。
+![](img/task1-1.png)
 
-![屏幕快照 2020-10-29 上午12.07.53](img/project2-1.png)
-
-如上图。iteration 为0的三个threads应该在同一个ticks中完成，iteration为1 的thread应该在iteration=0的点完成后相差10个ticks才能完成（比如后面3和4的情况那样）。但thread2在iteration0中，由于上文所说的原因，不能在同一个时间片中完成，与thread 1相差1个ticks。
+如上图。iteration为0的三个threads应该在同一个ticks中完成，iteration为1的thread应该在iteration=0的点完成后相差10个ticks才能完成（比如后面3和4的情况那样）。但thread2在iteration0中，由于上文所说的原因，不能在同一个时间片中完成，与thread 1相差1个ticks。
 
 ### 设计思路
 
@@ -140,7 +138,29 @@ intr_set_level (old_level);
 - 牺牲空间，节省时间
   - 我们多开了一个队列，保存阻塞的睡眠线程，使得每一次tick遍历时，只需要遍历睡眠的线程，而不需要遍历所有的线程（等待运行的线程、正在运行的线程以及睡眠中的线程）
 
-## PRIORITY SCHEDULING
+## QUESTION 2: PRIORITY SCHEDULING
+
+我们在做这道题时，根据测试结果，将其分成了若干阶段，或称之为将问题分解为了几个Part。以下，我们将对各个Part进行需求分析与思路分析。
+
+- Part 1: 优先队列的设计与实现
+- Part 2: 优先级捐赠的设计与实现
+
+### 需求分析
+
+在这个问题中，我们要实现线程根据其优先级
+
+#### Part 1
+
+
+
+结果：
+
+![](img/task2-1.png)
+
+
+#### Part 2
+
+### 设计思路
 
 ### DATA STRUCTURES
 
@@ -174,7 +194,7 @@ intr_set_level (old_level);
 > B7: Why did you choose this design?  In what ways is it superior to
 > another design you considered?
 
-## ADVANCED SCHEDULER
+## QUESTION 3: ADVANCED SCHEDULER
 
 ### DATA STRUCTURES
 
