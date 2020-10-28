@@ -135,6 +135,28 @@ intr_set_level (old_level);
 
 ## QUESTION 2: PRIORITY SCHEDULING
 
+我们在做这道题时，根据测试结果，将其分成了若干阶段，或称之为将问题分解为了几个Part。以下，我们将对各个Part进行需求分析与思路分析。
+
+- Part 1: 优先队列的设计与实现
+- Part 2: 优先级捐赠的设计与实现
+
+### 需求分析
+
+在这个问题中，我们要实现线程根据其优先级
+
+#### Part 1
+
+
+
+结果：
+
+![](img/1.png)
+
+
+#### Part 2
+
+### 设计思路
+
 ### DATA STRUCTURES
 
 > B1: Copy here the declaration of each new or changed `struct` or
