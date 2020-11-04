@@ -30,6 +30,7 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -87,7 +88,7 @@ timer_elapsed (int64_t then)
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
-timer_sleep (int64_t ticks) //zyh hpf zcy 
+timer_sleep (int64_t ticks) //zyh hpf zcy szl
 {
   if (ticks <= 0){return;} 
   ASSERT (intr_get_level () == INTR_ON);
@@ -95,7 +96,8 @@ timer_sleep (int64_t ticks) //zyh hpf zcy
   struct thread *current_thread = thread_current ();
   // 设置睡眠时间
   current_thread->ticks_blocked = ticks;
-  thread_sleep_block ();
+  pushin_blocked_list();
+  thread_block ();
   intr_set_level (old_level);
 }
 
@@ -175,8 +177,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  // 对每个线程执行blocked_thread_check()函数
-  blocked_thread_foreach (blocked_thread_check, NULL);
+  blocked_thread_foreach (blocked_thread_check, NULL);//szl
+  //thread_foreach(thread_check,NULL);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

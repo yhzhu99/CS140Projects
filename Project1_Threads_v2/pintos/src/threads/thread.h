@@ -83,7 +83,7 @@ typedef int tid_t;
 struct thread
   {
     /* Owned by thread.c. */
-    int64_t ticks_blocked; /*阻塞时间*/
+    int64_t ticks_blocked; /*blocked ticks created by hpf*/
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
@@ -93,7 +93,7 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. readylist*/
-    struct list_elem bloelem;           /* List element. blockedlist szl */
+    struct list_elem bloelem;           /* List element. blockedlist created by szl */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -119,7 +119,7 @@ typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
 void thread_block (void);
-void thread_sleep_block (void);
+void pushin_blocked_list (void); //szl 将当前线程放入blocked_list
 void thread_unblock (struct thread *);
 
 struct thread *thread_current (void);
@@ -143,5 +143,10 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void blocked_thread_check (struct thread *t, void *aux UNUSED);//szl
-
+void thread_check(struct thread*t, void *aun UNUSED);
+void ready_list_ticks_priority_info();
+void blocked_list_ticks_priority_info();
+bool check_size();
+bool list_less_cmp(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED);
+bool blocked_list_less_cmp(const struct list_elem *a, const struct list_elem *b,void *aux UNUSED);
 #endif /* threads/thread.h */
