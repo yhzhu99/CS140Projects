@@ -54,8 +54,6 @@
 
 ### 设计思路
 
-拿到题目之后，发现了原先代码的什么问题，我们想到什么方式来解决，我们是大概是怎么解决的...
-
 如同需求分析中所说的，我们发现，使用忙等待机制，用轮询来满足需求所要求的线程睡眠，会占用大量资源，使得无法在一个时间片中完成所有的工作，会拖延到下一个时间片中才能完成。
 
 本组决定使用线程阻塞的方法来实现线程睡眠的方式。在具体实现的时候，本组的方法在每个时间片不再对每一个threads 进行轮询。而是将threads放入block_list中，每个时间片检查block_lists 中的线程是否到了唤醒的时间。如果threads没有到规定的唤醒时间，就将其重新放回到block_list中等待下一次时间片的查询。若是已经到了规定的唤醒时间，那么就将该线程放入到ready_list当中，以等待running的调用。这样的做法可以节省计算机的资源。原本的方法是在每个时间片中轮询，相当于在一个时间片中依次运行所有的线程，严重浪费了计算机的资源。现在的阻塞方法免除了每个时间片依次执行的低效率，而只是简单的判断时间和队列操作，极大地提高了效率。
@@ -65,17 +63,18 @@
 > A1: Copy here the declaration of each new or changed `struct` or
 > `struct` member, global or static variable, `typedef`, or
 > enumeration.  Identify the purpose of each in 25 words or less.
-- `int64_t ticks_blocked`
+
+- [NEW]`int64_t ticks_blocked`
   - 记录线程应该被阻塞的时间
-- `struct list_elem bloelem;`
+- [NEW]`struct list_elem bloelem;`
   - List element：在Blocked list中的list element，用来存储被阻塞的线程
-- `void thread_sleep_block (void);`
+- [CHANGED]`void thread_sleep_block (void);`
   - 把当前运行中判断为需要睡眠的线程中的元素放入blocked list中，设置线程状态为THREAD_BLOCKED
-- `static struct list blocked_list;`
+- [NEW]`static struct list blocked_list;`
   - 被阻塞的线程列表：当线程在阻塞（睡眠）过程中会被放入这个列表，在唤醒时会被移除
-- `void blocked_thread_check(struct thread *t, void *aux UNUSED)`
+- [NEW]`void blocked_thread_check(struct thread *t, void *aux UNUSED)`
   - t线程需要的睡眠时间片减一；检查当前t线程是否已睡醒：如果应该在睡眠状态，则继续放在list里，否则移出`blocked_list`
-- `void blocked_thread_foreach(thread_action_func *func, void *aux)`
+- [NEW]`void blocked_thread_foreach(thread_action_func *func, void *aux)`
   - 对所有阻塞线程执行`func`,传递`aux`，必须阻塞中断
 
 ### ALGORITHMS
@@ -179,6 +178,36 @@ intr_set_level (old_level);
 > B1: Copy here the declaration of each new or changed `struct` or
 > `struct` member, global or static variable, `typedef`, or
 > enumeration.  Identify the purpose of each in 25 words or less.
+
+每当signal取出时排序
+
+`thread.c`
+
+- [NEW]`bool list_less_cmp()`
+  - 比较函数，将线程按priority排序。
+- [CHANGED]`thread_create()`
+  - 线程创建时，添加`yield()`。如果当前线程优先级比新创建的线程低，则当前线程需要转让资源。
+- [CHANGED]`pushin_blocked_list()`
+  - 修改线程插入至blocked_list中为按序插入
+- [CHANGED]`thread_unblock()`
+  - 修改线程插入至ready_list中为按序插入
+- [CHANGED]`thread_yield()`
+  - 修改线程插入至ready_list中为按序插入
+- [CHANGED]`thread_set_priority()`
+  - 每当线程更新(Sets the current thread's priority to NEW_PRIORITY)，添加`yield()`，直接转让资源
+- [CHANGED]`init_thread()`
+  - 将`list_push_back()`改为按序插入(`list_insert_ordered()`)
+
+`synch.c`
+
+- [CHANGED]`sema_down()`
+  - 将`list_push_back()`改为按序插入(`list_insert_ordered()`)
+- [CHANGED]`sema_up (struct semaphore *sema)`
+  - 添加`yield()`：由于唤醒的优先级可能更高，因为创建的线程默认最低，直接转让资源。
+- [NEW]`bool list_less_sema()`
+  - 比较函数，内含排序结构体。对于排队等待信号量上的线程列表，选取所含线程中优先级最高者进行排序。
+- [CHANGED]`cond_signal()`
+  - 每当唤醒线程时进行排序，保证有序。
 
 > B2: Explain the data structure used to track priority donation.
 > Use ASCII art to diagram a nested donation.  (Alternately, submit a
