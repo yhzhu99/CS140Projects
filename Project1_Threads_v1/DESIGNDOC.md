@@ -42,11 +42,11 @@
 
 ### 需求分析
 
-初始程序中通过忙等待机制来实现`timer_sleep`函数。但是这种忙等待机制的实现方式会过多的占用计算机系统的资源，对于某些资源分配不足的计算机系统（比如本组实验使用的Ubuntu虚拟机），难以通过第一部分的部分测试数据点(比如`alarm_simultaneous/alarm_priority`)。这是因为忙等待通过轮询的方式，在每个时间片将每个线程都放入`running`中运行以判断是否达到睡眠时间，并且将没有达到睡眠时间的线程重新放回`ready_list`中等待下一次的轮询。使用这种忙等待机制/轮询的方法，在每一个时间片中，需要进行太多的工作，以至于在资源分配不足的情况下无法在一个时间片中执行完成本应该在一个时间片中执行完毕的工作。
+初始程序中通过忙等待机制来实现`timer_sleep`函数。但是这种忙等待机制的实现方式会过多的占用计算机系统的资源，对于某些资源分配不足的计算机系统（比如本组实验使用的Ubuntu虚拟机），难以通过第一部分的部分测试数据点(比如`alarm_simultaneous`)。这是因为忙等待通过轮询的方式，在每个时间片将每个线程都放入`running_list`中运行以判断是否达到睡眠时间，并且将没有达到睡眠时间的线程重新放回`ready_list`中等待下一次的轮询。使用这种忙等待机制/轮询的方法，在每一个时间片中，需要进行太多的工作，以至于在资源分配不足的情况下无法在一个时间片中执行完成本应该在一个时间片中执行完毕的工作。
 
 ![](img/task1-1.png)
 
-如上图。iteration 为0的三个threads应该在同一个ticks中完成，iteration为1 的thread应该在iteration=0的点完成后相差10个ticks才能完成（比如后面3和4的情况那样）。但thread2在iteration0中，由于上文所说的原因，不能在同一个时间片中完成，与thread 1相差1个ticks，与原本设想中的每隔十个ticks在一个时间片中运行三个threads的设想不符。
+如上图。iteration 为0的三个threads应该在同一个ticks中完成，iteration为1的thread应该在iteration=0的点完成后相差10个ticks才能完成（比如后面3和4的情况那样）。但thread2在iteration0中，由于上文所说的原因，不能在同一个时间片中完成，与thread 1相差1个ticks，与原本设想中的每隔十个ticks在一个时间片中运行三个threads的设想不符。
 
 通过以上的需求分析，我们发现，通过忙等待机制来实现timer_sleep函数只能满足部分需求，而不能完美而彻底的实现题目给出的需求，因此，必须寻求新的方法方式，以满足需求的要求。
 
@@ -56,7 +56,9 @@
 
 如同需求分析中所说的，我们发现，使用忙等待机制，用轮询来满足需求所要求的线程睡眠，会占用大量资源，使得无法在一个时间片中完成所有的工作，会拖延到下一个时间片中才能完成。
 
-本组决定使用线程阻塞的方法来实现线程睡眠的方式。在具体实现的时候，本组的方法在每个时间片不再对每一个threads 进行轮询。而是将threads放入block_list中，每个时间片检查block_lists 中的线程是否到了唤醒的时间。如果threads没有到规定的唤醒时间，就将其重新放回到block_list中等待下一次时间片的查询。若是已经到了规定的唤醒时间，那么就将该线程放入到ready_list当中，以等待running的调用。这样的做法可以节省计算机的资源。原本的方法是在每个时间片中轮询，相当于在一个时间片中依次运行所有的线程，严重浪费了计算机的资源。现在的阻塞方法免除了每个时间片依次执行的低效率，而只是简单的判断时间和队列操作，极大地提高了效率。
+本组决定使用线程阻塞的方法来实现线程睡眠的方式。在具体实现的时候，本组的方法在每个时间片不再对每一个thread进行轮询。而是将thread放入block_list中，每个时间片检查block_list中的线程是否到了唤醒的时间。如果threads没有到规定的唤醒时间，则等待下一次时间片的查询。若是已经到了规定的唤醒时间，那么就将该线程从block_list中取出，放入到ready_list当中。
+
+这样的做法可以节省计算机的资源。原本的方法是在每个时间片中轮询，相当于在一个时间片中依次运行所有的线程，严重浪费了计算机的资源。现在的阻塞方法免除了每个时间片依次执行的低效率，而只是简单的判断时间和队列操作，极大地提高了效率。
 
 ### DATA STRUCTURES
 
@@ -64,12 +66,12 @@
 > `struct` member, global or static variable, `typedef`, or
 > enumeration.  Identify the purpose of each in 25 words or less.
 
-- [NEW]`int64_t ticks_blocked`
+- [NEW]`int64_t ticks_blocked;`
   - 记录线程应该被阻塞的时间
 - [NEW]`struct list_elem bloelem;`
   - List element：在Blocked list中的list element，用来存储被阻塞的线程
-- [CHANGED]`void thread_sleep_block (void);`
-  - 把当前运行中判断为需要睡眠的线程中的元素放入blocked list中，设置线程状态为THREAD_BLOCKED
+- [NEW]`pushin_blocked_list()`
+  - 将当前线程放入blocked_list中
 - [NEW]`static struct list blocked_list;`
   - 被阻塞的线程列表：当线程在阻塞（睡眠）过程中会被放入这个列表，在唤醒时会被移除
 - [NEW]`void blocked_thread_check(struct thread *t, void *aux UNUSED)`
@@ -85,7 +87,7 @@
 - `timer_sleep()`  
 
 ```
-判断正在运行中的线程需要的睡眠时间是否大于0，是则继续，否则return
+判断正在运行中的线程需要的睡眠时间是否大于0，是则执行步骤2，否则return
 禁用中断
 设置当前线程的ticks_blocked为ticks，即保存该线程需要睡眠的时间
 将该线程放入blocked_list队列，并设置状态为THREAD_BLOCKED
@@ -96,13 +98,11 @@
 
 ```
 更新当前系统时间片 
-遍历blocked_list中所有的线程，执行第三步
+遍历blocked_list中所有的线程，执行第3步
 该线程的ticks_blocked--
-判断ticks_blocked是否为0，如果是则执行第五步，否则遍历下一个线程，执行第三步
-禁用中断
+判断ticks_blocked是否为0，如果是则执行第5步，否则遍历下一个线程，执行第3步
 将该线程从blocked_list中移除
 将线程放入ready_list队列中，并将status设置为THREAD_READY
-还原中断状态
 遍历下一个线程直至遍历完blocked_list中所有线程
 ```
 
@@ -120,6 +120,8 @@
 
 > A4: How are race conditions avoided when multiple threads call
 > timer_sleep() simultaneously?
+
+[TODO A4 A5]
 
 ```c
 enum intr_level old_level = intr_disable ();
@@ -165,7 +167,7 @@ intr_set_level (old_level);
 
 #### Part 1 (优先队列)
 
-若要保证有序，我们想到了两种思路：一种是在线程插入至list中时，即通过比较函数，将其根据优先级顺序，插入至相应的位置；另一种则不改变插入的函数，而是在取出某一个线程时，根据其优先级的要求，如取出当前list中优先级最高的线程。两种方式应当均可，时间复杂度也相当，每一次的操作均可为$O(n)$。考虑到二分算法，前者可以优化至$O(\log{n})$的复杂度，我们在此选择了前者的实现方式，并提供了适当的接口，使得设计出来的函数具有可扩展性。
+若要保证有序，我们想到了两种思路：一种是在线程插入至list中时，即通过比较函数，将其根据优先级顺序，插入至相应的位置；另一种则不改变插入的函数，而是在取出某一个线程时，根据其优先级的要求，如取出当前list中优先级最高的线程；此外，还有一种在每一次取出时，进行排序，然后取出队列中的第一个线程。3种方式应当均可，时间复杂度也相当，每一次的操作均可为$O(n)$。考虑到二分算法，前者可以优化至$O(\log{n})$的复杂度，我们在此选择了第3种的实现方式。
 
 修改完对应相关的函数后，对于Part1的实验结果如下图：
 
@@ -205,12 +207,18 @@ in `thread.c`
 in `synch.c`
 
 - [CHANGED]`sema_down()`
+  
   - 将`list_push_back()`改为按序插入(`list_insert_ordered()`)
 - [CHANGED]`sema_up (struct semaphore *sema)`
+  
   - 添加`yield()`：由于唤醒的优先级可能更高，因为创建的线程默认最低，直接转让资源。
 - [NEW]`bool list_less_sema()`
+  
   - 比较函数，内含排序结构体。对于排队等待信号量上的线程列表，选取所含线程中优先级最高者进行排序。
+  
+  [TODO]
 - [CHANGED]`cond_signal()`
+  
   - 每当唤醒线程时进行排序，保证有序。
 
 > B2: Explain the data structure used to track priority donation.
@@ -220,13 +228,13 @@ in `synch.c`
 As we mentioned in the above question, we added priority_original, 
 is_donated, locks, lock_blocked_by to thread, and added elem_lock and
 priority_lock to lock, to help track the priority donation.
- 
+
 Every time a lock is acquired by a thread, the lock will be inserted into the 
 thread’s locks field, which is an descending ordered list sorted by priority_lock
  field in the lock. Correspondingly, when a lock is released, it’s removed from 
 it’s holder’s locks list. And this is also where the elem_lock inside lock struct
  plays a role. 
- 
+
 In a single donation, when the lock is being acquired, the lock holder’s priority
  is checked, if it’s lower than the one who is acquiring lock, donation happens. 
 In our implementation, thread’s priority_original will change with priority except
@@ -235,7 +243,7 @@ priority. Then donee-thread’s priority is set donor-thread’s priority; is_do
  is set to true, if it’s not true already. The lock’s priority_lock is set to be 
 donor’s priority, to keep track of the highest priority in the lock’s waiter list.
  And the donor-thread’s lock_blocked_by is set to be this lock. 
- 
+
 Then it’s checked that whether the donne-thread is blocked by another lock, which 
 is needed for nested donation. If yes, another donation case will happen in the 
 same procedure above except the new donor is the current donee, the new donee is 
@@ -243,7 +251,7 @@ the lock holder whose lock blocks the current donee. The nested case will keep
 being checking iteratively untill no donee is blocked by some other thread or it 
 reaches the highest level(LOCK_LEVEL, we defined “globally” to determine how many 
 level we can search up to), whatever comes first.  
- 
+
 When a lock is released, the lock will be removed from the holder thread’s locks 
 list and then comes the checking of whether multiple donation happened to this 
 thread before. If the locks list is empty, no locks are held, it simply means no 
@@ -256,15 +264,15 @@ priority should be reset to it. Since locks is a descending order list sorted by
 the priority_lock field, we can guarantee that the first lock in the list has the
  highest priority among all the waiters of all locks, which is the priority the 
 holder should have. 
- 
+
 Using the data structure and algorithm above, priority donation, including the 
 simplest donation, multiple donation, and nest donation, can be achieved.
- 
+
 take example like this
 A thread, priority 31, has lock lock_1. 
 B thread, priority 32, has lock lock_2, and acquire lock_1
 C thread, priority 33, acquire lock_2 
- 
+
 Step 1: At the beginning:
 =========================
 .---------------------------------------------------.
@@ -301,7 +309,7 @@ Step 1: At the beginning:
 | lock_blocked_by   | NULL  |
 '-------------------+-------'
 ==================================================================
- 
+
 Step 2: B acquires lock_1:
 ==========================
 .---------------------------------------------------.
@@ -338,7 +346,7 @@ Step 2: B acquires lock_1:
 | lock_blocked_by   | NULL  |
 '-------------------+-------'
 ==================================================================
- 
+
 STEP 3-1: C acquires lock_2:
 ============================
 .---------------------------------------------------.
@@ -375,7 +383,7 @@ STEP 3-1: C acquires lock_2:
 | lock_blocked_by   | NULL                          |
 '-------------------+-------------------------------'
 ==================================================================
- 
+
 STEP 3-2: C acquires lock_2:
 ============================
 .---------------------------------------------------.
@@ -412,7 +420,7 @@ STEP 3-2: C acquires lock_2:
 | lock_blocked_by   | NULL                          |
 '-------------------+-------------------------------'
 ==================================================================
- 
+
 STEP 4: A releases lock_1:
 ==========================
 .-------------------------------.
@@ -450,7 +458,7 @@ STEP 4: A releases lock_1:
 | lock_blocked_by    | &lock_2 |
 '--------------------+---------'
 ==================================================================
- 
+
 STEP 5: B releases lock_2:
 ==========================
 .-------------------------------.
@@ -493,7 +501,7 @@ STEP 5: B releases lock_2:
 > B3: How do you ensure that the highest priority thread waiting for
 > a lock, semaphore, or condition variable wakes up first?
 
-在DATA STRUCTURE部分，我们已经指明，我们把必要的`list_push_back()`改为了`list_insert_ordered()`。每当线程被取出/插入至list中去时，我们都进行一次按priority排序，以使线程最终有序地被唤醒。
+在DATA STRUCTURE部分，我们已经指明，我们把必要的`list_push_back()`改为了`list_insert_ordered()`。每当线程被取出至list中去时，我们都进行一次按priority排序，以使线程最终有序地被唤醒。
 
 > B4: Describe the sequence of events when a call to lock_acquire()
 > causes a priority donation.  How is nested donation handled?
@@ -501,6 +509,7 @@ STEP 5: B releases lock_2:
 A: Steps:
    1. Disable interrupts
    2. Donation
+
      2.1 IF lock_holder is NULL
      2.1.1  sema_down: if sema value is 0, put all threads acquiring this
             lock into the sema’s waiters list until sema value becomes 
@@ -517,7 +526,7 @@ A: Steps:
      2.2.2.2  Does sema_down, until the lock is released
      2.2.2.3  The current thread becomes this lock’s holder
    3. Set interrupts to the status before it was disabled
- 
+
 If the current lock holder is blocked by another lock, then using thread->
 lock_blocked_by to find out that lock, does the above donation process to that 
 lock. Repeat this process until thread->lock_blocked_by is NULL or it reaches a
@@ -537,6 +546,7 @@ A: Steps:
       lock which can be get by its semaphore.waiters or any thread is
       going to acquire it
    5. Set the original lock_holder’s priority value
+
      5.1 IF no donation happened
            Set lock_holder’s priority value to its original priority value
      5.2 ELSE
@@ -546,7 +556,7 @@ A: Steps:
      5.2.2  ELSE (Nested donation)
      5.2.2.1  Set original lock_holder’s priority to the highest priority
               in its locks list.
- 
+
 After this lock is released, this lock’s sema value will increased by 1 and sema 
 value becomes positive. The waited highest-priority thread will get this lock.
 
@@ -561,7 +571,7 @@ A: During priority donation, the lock holder’s priority may be set by it’s d
 at the mean time, the thread itself may want to change the priority.
 If the donor and the thread itself set the priority in a different order, may 
 cause a different result. 
- 
+
 We disable the interrupt to prevent it happens. It can not be avoided using a lock
 in our implementation, since we didn’t provide the interface and structure to 
 share a lock between donor and the thread itself. If we add a lock to the thread 
