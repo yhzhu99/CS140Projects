@@ -167,7 +167,15 @@ intr_set_level (old_level);
 
 #### Part 1 (优先队列)
 
-若要保证有序，我们想到了两种思路：一种是在线程插入至list中时，即通过比较函数，将其根据优先级顺序，插入至相应的位置；另一种则不改变插入的函数，而是在取出某一个线程时，根据其优先级的要求，如取出当前list中优先级最高的线程；此外，还有一种在每一次取出时，进行排序，然后取出队列中的第一个线程。3种方式应当均可，时间复杂度也相当，每一次的操作均可为$O(n)$。考虑到二分算法，前者可以优化至$O(\log{n})$的复杂度，我们在此选择了第3种的实现方式。
+若要保证有序，我们想到了3种思路：
+
+1. 是在线程插入至list中时，即通过比较函数，将其根据优先级顺序，插入至相应的位置
+2. 不改变插入的函数，而是在取出某一个线程时，根据其优先级的要求，如取出当前list中优先级最高的线程
+3. 在每一次取出时，进行排序，然后取出队列中的第一个线程
+
+3种方式应当均可，时间复杂度也相当，每一次的操作均可为$O(n)$。
+
+我们在此选择了第2种的实现方式，即在取出时通过`max()`来选取优先级最大的线程。
 
 修改完对应相关的函数后，对于Part1的实验结果如下图：
 
@@ -248,7 +256,7 @@ Then it’s checked that whether the donne-thread is blocked by another lock, wh
 is needed for nested donation. If yes, another donation case will happen in the 
 same procedure above except the new donor is the current donee, the new donee is 
 the lock holder whose lock blocks the current donee. The nested case will keep 
-being checking iteratively untill no donee is blocked by some other thread or it 
+being checking iteratively until no donee is blocked by some other thread or it 
 reaches the highest level(LOCK_LEVEL, we defined “globally” to determine how many 
 level we can search up to), whatever comes first.  
 
