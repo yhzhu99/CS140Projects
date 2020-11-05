@@ -115,9 +115,10 @@ sema_up (struct semaphore *sema) //szl
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+
+  if (!list_empty (&sema->waiters)) {
+    thread_unblock(list_entry (list_pop_front (&sema->waiters),struct thread, elem));
+  }
   sema->value++;
   thread_yield(); //唤醒后交出资源
   intr_set_level (old_level);
@@ -295,7 +296,7 @@ bool list_less_sema(const struct list_elem *a,const struct list_elem *b, void *a
   struct semaphore_elem *bb = list_entry (b, struct semaphore_elem, elem);
   struct thread *aaa=list_entry(list_front(&aa->semaphore.waiters), struct thread, elem);
   struct thread *bbb=list_entry(list_front(&bb->semaphore.waiters), struct thread, elem);
-  return aaa->priority > bbb->priority;
+  return aaa->priority < bbb->priority;
 }
 void
 cond_wait (struct condition *cond, struct lock *lock) 
@@ -331,7 +332,9 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   if (!list_empty (&cond->waiters)) {
     list_less_func *a=list_less_sema;
     list_sort(&cond->waiters,a,NULL);//hpf
-    sema_up (&list_entry (list_pop_front(&cond->waiters),
+    struct list_elem * temp = list_max(&cond->waiters,a,NULL);
+    list_remove(temp);
+    sema_up (&list_entry (temp,
                           struct semaphore_elem, elem)->semaphore);
   }
     
