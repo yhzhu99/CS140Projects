@@ -153,17 +153,17 @@ intr_set_level (old_level);
 
 ### 需求分析
 
-#### Part 1
+#### Part 1 (优先队列)
 
 在这个问题中，我们要实现线程根据其优先级进行相应的操作，如优先级较高的线程先执行；每当有优先级高的线程进入ready list时，当前正在执行的线程也要立即将处理器移交给新的优先级更高的线程……回顾了原先线程是如何加入到list中去的——单纯的push back操作，没有对线程优先级排序的操作使得此后的执行顺序皆为乱序。因此，我们首先所要做的，便是设计排序算法保证每次线程插入list中时均为有序的。
 
 但是，本组在对原始代码的实验中，发现了如下现象。
 
-#### Part 2
+#### Part 2 (优先级捐赠)
 
 ### 设计思路
 
-#### Part 1
+#### Part 1 (优先队列)
 
 若要保证有序，我们想到了两种思路：一种是在线程插入至list中时，即通过比较函数，将其根据优先级顺序，插入至相应的位置；另一种则不改变插入的函数，而是在取出某一个线程时，根据其优先级的要求，如取出当前list中优先级最高的线程。两种方式应当均可，时间复杂度也相当，每一次的操作均可为$O(n)$。考虑到二分算法，前者可以优化至$O(\log{n})$的复杂度，我们在此选择了前者的实现方式，并提供了适当的接口，使得设计出来的函数具有可扩展性。
 
@@ -173,7 +173,11 @@ intr_set_level (old_level);
 
 通过了2个priority相关的测试样例点。
 
-#### Part 2
+![](img/task2-2.png)
+
+完成信号量、条件变量的部分后，再通过了两个点，即通过了Problem 2除priority-donation的所有点。
+
+#### Part 2 (优先级捐赠)
 
 ### DATA STRUCTURES
 
@@ -181,9 +185,7 @@ intr_set_level (old_level);
 > `struct` member, global or static variable, `typedef`, or
 > enumeration.  Identify the purpose of each in 25 words or less.
 
-每当signal取出时排序
-
-`thread.c`
+in `thread.c`
 
 - [NEW]`bool list_less_cmp()`
   - 比较函数，将线程按priority排序。
@@ -200,7 +202,7 @@ intr_set_level (old_level);
 - [CHANGED]`init_thread()`
   - 将`list_push_back()`改为按序插入(`list_insert_ordered()`)
 
-`synch.c`
+in `synch.c`
 
 - [CHANGED]`sema_down()`
   - 将`list_push_back()`改为按序插入(`list_insert_ordered()`)
@@ -215,22 +217,355 @@ intr_set_level (old_level);
 > Use ASCII art to diagram a nested donation.  (Alternately, submit a
 > .png file.)
 
+As we mentioned in the above question, we added priority_original, 
+is_donated, locks, lock_blocked_by to thread, and added elem_lock and
+priority_lock to lock, to help track the priority donation.
+ 
+Every time a lock is acquired by a thread, the lock will be inserted into the 
+thread’s locks field, which is an descending ordered list sorted by priority_lock
+ field in the lock. Correspondingly, when a lock is released, it’s removed from 
+it’s holder’s locks list. And this is also where the elem_lock inside lock struct
+ plays a role. 
+ 
+In a single donation, when the lock is being acquired, the lock holder’s priority
+ is checked, if it’s lower than the one who is acquiring lock, donation happens. 
+In our implementation, thread’s priority_original will change with priority except
+ donation, so we can assume priority_original already preserves the current 
+priority. Then donee-thread’s priority is set donor-thread’s priority; is_donated
+ is set to true, if it’s not true already. The lock’s priority_lock is set to be 
+donor’s priority, to keep track of the highest priority in the lock’s waiter list.
+ And the donor-thread’s lock_blocked_by is set to be this lock. 
+ 
+Then it’s checked that whether the donne-thread is blocked by another lock, which 
+is needed for nested donation. If yes, another donation case will happen in the 
+same procedure above except the new donor is the current donee, the new donee is 
+the lock holder whose lock blocks the current donee. The nested case will keep 
+being checking iteratively untill no donee is blocked by some other thread or it 
+reaches the highest level(LOCK_LEVEL, we defined “globally” to determine how many 
+level we can search up to), whatever comes first.  
+ 
+When a lock is released, the lock will be removed from the holder thread’s locks 
+list and then comes the checking of whether multiple donation happened to this 
+thread before. If the locks list is empty, no locks are held, it simply means no 
+multiple donation happened, the thread should relinquish its donated priority 
+using priority_original. Otherwise, get the first lock from the locks list, if the
+ priority_lock field of it is unchanged (equal to the initial value PRIORITY_FAKE,
+ which means no donation happened), the thread relinquish it’s priority too. If 
+the field is changed, which means a donation was happened and the holder’s 
+priority should be reset to it. Since locks is a descending order list sorted by 
+the priority_lock field, we can guarantee that the first lock in the list has the
+ highest priority among all the waiters of all locks, which is the priority the 
+holder should have. 
+ 
+Using the data structure and algorithm above, priority donation, including the 
+simplest donation, multiple donation, and nest donation, can be achieved.
+ 
+take example like this
+A thread, priority 31, has lock lock_1. 
+B thread, priority 32, has lock lock_2, and acquire lock_1
+C thread, priority 33, acquire lock_2 
+ 
+Step 1: At the beginning:
+=========================
+.---------------------------------------------------.
+|                Thread A (Beginning)               |
++-------------------+-------------------------------+
+| member            | value                         |
++-------------------+-------------------------------+
+| priority          |                            31 |
+| priority_original |                            31 |
+| is_donated        | false                         |
+| locks             | {lock_1 (priority_lock = -1)} |
+| lock_blocked_by   | NULL                          |
+'-------------------+-------------------------------'
+.---------------------------------------------------.
+|                Thread B (Beginning)               |
++-------------------+-------------------------------+
+| member            | value                         |
++-------------------+-------------------------------+
+| priority          |                            32 |
+| priority_original |                            32 |
+| is_donated        | false                         |
+| locks             | {lock_2 (priority_lock = -1)} |
+| lock_blocked_by   | NULL                          |
+'-------------------+-------------------------------'
+.---------------------------.
+|    Thread C (Beginning)   |
++-------------------+-------+
+| member            | value |
++-------------------+-------+
+| priority          |    33 |
+| priority_original |    33 |
+| is_donated        | false |
+| locks             | {}    |
+| lock_blocked_by   | NULL  |
+'-------------------+-------'
+==================================================================
+ 
+Step 2: B acquires lock_1:
+==========================
+.---------------------------------------------------.
+|              Thread A (B acquires L1)             |
++-------------------+-------------------------------+
+| member            | value                         |
++-------------------+-------------------------------+
+| priority          |                            31 |
+| priority_original |                            32 |
+| is_donated        | true                          |
+| locks             | {lock_1 (priority_lock = 32)} |
+| lock_blocked_by   | NULL                          |
+'-------------------+-------------------------------'
+.---------------------------------------------------.
+|              Thread B (B acquires L1)             |
++-------------------+-------------------------------+
+| member            | value                         |
++-------------------+-------------------------------+
+| priority          |                            32 |
+| priority_original |                            32 |
+| is_donated        | false                         |
+| locks             | {lock_2 (priority_lock = -1)} |
+| lock_blocked_by   | &lock1                        |
+'-------------------+-------------------------------'
+.---------------------------.
+|  Thread C (B acquires L1) |
++-------------------+-------+
+| member            | value |
++-------------------+-------+
+| priority          |    33 |
+| priority_original |    33 |
+| is_donated        | false |
+| locks             | {}    |
+| lock_blocked_by   | NULL  |
+'-------------------+-------'
+==================================================================
+ 
+STEP 3-1: C acquires lock_2:
+============================
+.---------------------------------------------------.
+|          Thread B (C acquires L2, Step 1)         |
++-------------------+-------------------------------+
+| member            | value                         |
++-------------------+-------------------------------+
+| priority          |                            32 |
+| priority_original |                            33 |
+| is_donated        | true                          |
+| locks             | {lock_2 (priority_lock = 33)} |
+| lock_blocked_by   | &lock1                        |
+'-------------------+-------------------------------'
+.----------------------------------.
+| Thread C (C acquires L2, Step 1) |
++----------------------+-----------+
+| member               | value     |
++----------------------+-----------+
+| priority             |        33 |
+| priority_original    |        33 |
+| is_donated           | false     |
+| locks                | {}        |
+| lock_blocked_by      | &lock_2   |
+'----------------------+-----------'
+.---------------------------------------------------.
+|          Thread A (C acquires L2, Step 1)         |
++-------------------+-------------------------------+
+| member            | value                         |
++-------------------+-------------------------------+
+| priority          |                            31 |
+| priority_original |                            32 |
+| is_donated        | true                          |
+| locks             | {lock_1 (priority_lock = 32)} |
+| lock_blocked_by   | NULL                          |
+'-------------------+-------------------------------'
+==================================================================
+ 
+STEP 3-2: C acquires lock_2:
+============================
+.---------------------------------------------------.
+|          Thread B (C acquires L2, Step 2)         |
++-------------------+-------------------------------+
+| member            | value                         |
++-------------------+-------------------------------+
+| priority          |                            32 |
+| priority_original |                            33 |
+| is_donated        | true                          |
+| locks             | {lock_2 (priority_lock = 33)} |
+| lock_blocked_by   | &lock1                        |
+'-------------------+-------------------------------'
+.----------------------------------.
+| Thread C (C acquires L2, Step 2) |
++----------------------+-----------+
+| member               | value     |
++----------------------+-----------+
+| priority             |        33 |
+| priority_original    |        33 |
+| is_donated           | false     |
+| locks                | {}        |
+| lock_blocked_by      | &lock_2   |
+'----------------------+-----------'
+.---------------------------------------------------.
+|          Thread A (C acquires L2, Step 2)         |
++-------------------+-------------------------------+
+| member            | value                         |
++-------------------+-------------------------------+
+| priority          |                            31 |
+| priority_original |                            33 |
+| is_donated        | true                          |
+| locks             | {lock_1 (priority_lock = 32)} |
+| lock_blocked_by   | NULL                          |
+'-------------------+-------------------------------'
+==================================================================
+ 
+STEP 4: A releases lock_1:
+==========================
+.-------------------------------.
+| Thread A (A releases lock_1)) |
++---------------------+---------+
+| member              | value   |
++---------------------+---------+
+| priority            |      31 |
+| priority_original   |      31 |
+| is_donated          | false   |
+| locks               | {}      |
+| lock_blocked_by     | NULL    |
+'---------------------+---------'
+.----------------------------------------------------.
+|            Thread B (A releases lock_1)            |
++-------------------+--------------------------------+
+| member            | value                          |
++-------------------+--------------------------------+
+| priority          |                             32 |
+| priority_original |                             33 |
+| is_donated        | true                           |
+| locks             | {&lock_2 (priority_lock = 33), |
+|                   |  &lock_1 (priority_lock = 32)} |
+| lock_blocked_by   | NULL                           |
+'-------------------+--------------------------------'
+.------------------------------.
+| Thread C (A releases lock_1) |
++--------------------+---------+
+| member             | value   |
++--------------------+---------+
+| priority           |      33 |
+| priority_original  |      33 |
+| is_donated         | false   |
+| locks              | {}      |
+| lock_blocked_by    | &lock_2 |
+'--------------------+---------'
+==================================================================
+ 
+STEP 5: B releases lock_2:
+==========================
+.-------------------------------.
+| Thread A (B releases lock_2)) |
++---------------------+---------+
+| member              | value   |
++---------------------+---------+
+| priority            |      31 |
+| priority_original   |      31 |
+| is_donated          | false   |
+| locks               | {}      |
+| lock_blocked_by     | NULL    |
+'---------------------+---------'
+.----------------------------------------------------.
+|            Thread B (B releases lock_2)            |
++-------------------+--------------------------------+
+| member            | value                          |
++-------------------+--------------------------------+
+| priority          |                             32 |
+| priority_original |                             32 |
+| is_donated        | false                          |
+| locks             | {&lock_1 (priority_lock = 32)} |
+| lock_blocked_by   | NULL                           |
+'-------------------+--------------------------------'
+.----------------------------------------------------.
+|            Thread C (B releases lock_2)            |
++-------------------+--------------------------------+
+| member            | value                          |
++-------------------+--------------------------------+
+| priority          |                             33 |
+| priority_original |                             33 |
+| is_donated        | false                          |
+| locks             | {&lock_2 (priority_lock = 33)} |
+| lock_blocked_by   | NULL                           |
+'-------------------+--------------------------------'
+==================================================================
+
 ### ALGORITHMS
 
 > B3: How do you ensure that the highest priority thread waiting for
 > a lock, semaphore, or condition variable wakes up first?
 
+在DATA STRUCTURE部分，我们已经指明，我们把必要的`list_push_back()`改为了`list_insert_ordered()`。每当线程被取出/插入至list中去时，我们都进行一次按priority排序，以使线程最终有序地被唤醒。
+
 > B4: Describe the sequence of events when a call to lock_acquire()
 > causes a priority donation.  How is nested donation handled?
 
+A: Steps:
+   1. Disable interrupts
+   2. Donation
+     2.1 IF lock_holder is NULL
+     2.1.1  sema_down: if sema value is 0, put all threads acquiring this
+            lock into the sema’s waiters list until sema value becomes 
+            positive 
+     2.1.2  Set the current thread to this lock’s holder
+     2.2 ELSE compare lock_holder’s (L) priority with current thread’s (C)
+         priority:
+     2.2.1  IF L’s priority > C’s priority
+     2.2.1.1  Does sema_down until the sema value becomes positive
+              which means lock is released             
+     2.2.1.2  Set the current thread to this lock’s holder
+     2.2.2  ELSE:
+     2.2.2.1  [Donation] Set L’s priority to C’s priority
+     2.2.2.2  Does sema_down, until the lock is released
+     2.2.2.3  The current thread becomes this lock’s holder
+   3. Set interrupts to the status before it was disabled
+ 
+If the current lock holder is blocked by another lock, then using thread->
+lock_blocked_by to find out that lock, does the above donation process to that 
+lock. Repeat this process until thread->lock_blocked_by is NULL or it reaches a
+certain depths set by users (in our program, since there are 8 threads, we set 
+the nest depths to 8). After this process, all locks holders have the same 
+priority as the thread which acquires the first lock.
+
 > B5: Describe the sequence of events when lock_release() is called
 > on a lock that a higher-priority thread is waiting for.
+
+A: Steps:
+   1. Make sure this thread is the holder of this lock. If it is not the
+      holder, report error.
+   2. Disable interrupts.
+   3. Set the lock holder to NULL
+   4. Does sema_up: increase the sema value by 1, which means this
+      lock which can be get by its semaphore.waiters or any thread is
+      going to acquire it
+   5. Set the original lock_holder’s priority value
+     5.1 IF no donation happened
+           Set lock_holder’s priority value to its original priority value
+     5.2 ELSE
+     5.2.1  IF original lock_holder holds only this lock
+     5.2.1.1  Set original lock_holder’s priority value to its original 
+              priority value
+     5.2.2  ELSE (Nested donation)
+     5.2.2.1  Set original lock_holder’s priority to the highest priority
+              in its locks list.
+ 
+After this lock is released, this lock’s sema value will increased by 1 and sema 
+value becomes positive. The waited highest-priority thread will get this lock.
+
 
 ### SYNCHRONIZATION
 
 > B6: Describe a potential race in thread_set_priority() and explain
 > how your implementation avoids it.  Can you use a lock to avoid
 > this race?
+
+A: During priority donation, the lock holder’s priority may be set by it’s donor,
+at the mean time, the thread itself may want to change the priority.
+If the donor and the thread itself set the priority in a different order, may 
+cause a different result. 
+ 
+We disable the interrupt to prevent it happens. It can not be avoided using a lock
+in our implementation, since we didn’t provide the interface and structure to 
+share a lock between donor and the thread itself. If we add a lock to the thread 
+struct, it may be avoided using it. 
 
 ### RATIONALE
 
