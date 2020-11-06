@@ -89,6 +89,9 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int original_priority;              /* Base priority. */
+    struct list hold_lock;              /* 占有的锁列表. */
+    struct lock *acquired_lock;         /* 请求的锁. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -136,6 +139,7 @@ void blocked_thread_foreach (thread_action_func *,void *); // szl
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+int thread_get_original_priority(void);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
@@ -144,9 +148,6 @@ int thread_get_load_avg (void);
 
 void blocked_thread_check (struct thread *t, void *aux UNUSED);//szl
 void thread_check(struct thread*t, void *aun UNUSED);
-void ready_list_ticks_priority_info();
-void blocked_list_ticks_priority_info();
-bool check_size();
 bool list_less_cmp(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED);
 bool blocked_list_less_cmp(const struct list_elem *a, const struct list_elem *b,void *aux UNUSED);
 #endif /* threads/thread.h */

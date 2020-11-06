@@ -83,35 +83,6 @@ bool blocked_list_less_cmp(const struct list_elem *a, const struct list_elem *b,
 {
   return list_entry(a, struct thread, bloelem)->priority > list_entry(b, struct thread, bloelem)->priority;
 }
-void 
-ready_list_ticks_priority_info()
-{
-  struct list_elem *e;
-  ASSERT (&ready_list != NULL);
-  for (e = list_begin(&ready_list);e!=list_end(&ready_list);e=list_next(e)){
-    struct thread *t=list_entry(e,struct thread,elem);
-    printf("(%d %s) ",t->tid,t->name);
-   
-  }
-   printf("\n");
-  return ;
-}
-void 
-blocked_list_ticks_priority_info()
-{
-  struct list_elem *e;
-  ASSERT (&blocked_list != NULL);
-  for (e = list_begin(&blocked_list);e!=list_end(&blocked_list);e=list_next(e)){
-    struct thread *t=list_entry(e,struct thread,bloelem);
-    printf("(%s) ",t->name);
-    
-  }
-  printf("\n");
-  return ;
-}
-bool check_size(){
-  return list_size(&blocked_list)>0;
-}
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -208,6 +179,7 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 
 {
+  //printf("%s thread_create\n",name);
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
@@ -427,7 +399,12 @@ blocked_thread_check(struct thread* t, void *aux)//szl
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  struct thread *cur=thread_current();
+  cur->original_priority = new_priority;
+  if(list_empty(&cur->hold_lock)||new_priority>cur->priority){
+    cur->priority = new_priority;
+    //thread_yield();
+  }
   thread_yield();
 }
 
@@ -437,7 +414,11 @@ thread_get_priority (void)
 {
   return thread_current ()->priority;
 }
-
+int 
+thread_get_original_priority(void)
+{
+  return thread_current()->original_priority;
+}
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int nice UNUSED) 
@@ -555,8 +536,10 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->original_priority = priority;
   t->magic = THREAD_MAGIC;
-
+  t->acquired_lock = NULL;
+  list_init(&t->hold_lock);
   old_level = intr_disable ();
   list_less_func *a =list_less_cmp;
   list_insert_ordered(&all_list,&t->allelem,a,NULL);
