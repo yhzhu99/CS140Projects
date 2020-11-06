@@ -4,7 +4,7 @@
 
 > Fill in the names and email addresses of your group members.
 
-| 姓名   | 学号     | 邮箱         | 占比 |
+| NAME | SID | MAIL     | RATIO |
 | ------ | -------- | ------------ | ---- |
 | 朱英豪 | 18373722 | 18373722@buaa.edu.cn | 25%  |
 | 施哲纶 | 18373044 | 18373044@buaa.edu.cn | 25%  |
@@ -13,12 +13,12 @@
 
 > 主要负责内容
 
-| 姓名   | ALARM CLOCK              | PRIORITY SCHEDULING | ADVANCED SCHEDULER |
-| ------ | ------------------------ | ------------------- | ------------------ |
-| 朱英豪 | 需求、思路设计；文档编写 |                     |                    |
-| 施哲纶 | 具体算法实现；文档编写   |                     |                    |
-| 胡鹏飞 | 项目前期调研；理解Pintos |                     |                    |
-| 朱晨宇 | 负责Debug，代码风格检查  |                     |                    |
+| NAME   | RESPONSIBLE FOR          |
+| ------ | ------------------------ |
+| 朱英豪 | 需求、思路设计；文档编写 |
+| 施哲纶 | 具体算法实现；文档审核   |
+| 胡鹏飞 | 项目前期调研；理解Pintos |
+| 朱晨宇 | 负责Debug，代码风格检查  |
 
 > Github记录
 
@@ -171,9 +171,9 @@ intr_set_level (old_level);
 
 #### Part 2 (优先级捐赠)
 
-优先级捐赠/优先级翻转问题，也就是以priority-donate为开头的一系列测试点。
+优先级捐赠/优先级翻转问题，也就是以`priority-donate`为开头的一系列测试点。
 
-本组综合分析了以priority-donate-chain,priority-donate-lower,priority-donate-multiple,priority-donate-multiple2,priority-donate-nest,priority-donate-sema,priority-donate-one为代表的测试点。在对比了.ck文件中的标准输出和本组在实验机上的输出答案后，本组发现了如下的问题。
+本组综合分析了以`priority-donate-chain`, `priority-donate-lower`, `priority-donate-multiple`, `priority-donate-multiple2`, `priority-donate-nest`, `priority-donate-sema`, `priority-donate-one`为代表的测试点。在对比了`.ck`文件中的标准输出和本组在实验机上的输出答案后，本组发现了如下的问题：
 
 当一个较低权重的线程和一个中等权重的线程同时在ready-list中，并且较低线程拥有一个锁，该锁同时被一个较高权重的线程acquire，那么较高权重的线程就会被锁在较低权重的线程之上，按照原本的设定，执行顺序应该为中等权重的线程，较低权重的线程，较高权重的线程。但根据标准输出的样例，则可以发现，标准的执行顺序应该是较低权重的线程，较高权重的线程，中等权重的线程。程序需要保证，权重最高的线程能够被给予尽可能多的时间，以尽可能高的顺序被执行。因此，需要将被锁在相同一个锁之上的较低权重的线程被赋予与较高权重的线程同样权重的权重，以保证能够使得较高权重的线程能够优先于中等权重的线程执行。这就是所谓的优先级捐赠。
 
@@ -198,6 +198,7 @@ intr_set_level (old_level);
 priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的权重。
 
 ​                                                                                         
+以上根据`priority-donate-one`等简单测试点得出的需求。在更为复杂，更为综合的情景中，需要考虑更多的需求。比如，在线程释放掉锁之后，线程需要重新考虑自身的权重，或是恢复为原本的权重，或是重新从未释放的锁中获取当前最高的权重。此外，在例如`priority-donate-chain`和`multiple`等
 
 ### 设计思路
 
