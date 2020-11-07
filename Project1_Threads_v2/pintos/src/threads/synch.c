@@ -71,7 +71,8 @@ sema_down (struct semaphore *sema) //szl
     {
       // list_less_func *a=list_less_cmp;
       // list_insert_ordered(&sema->waiters, &thread_current ()->elem,a,NULL);
-      list_push_back(&sema->waiters,&thread_current()->elem); //将排序处理放在sema_up，方便线程被donate后的更新
+      list_push_back(&sema->waiters,&thread_current()->elem);
+      //将排序处理放在sema_up，方便线程被donate后的更新
       thread_block ();
     }
   sema->value--;
@@ -120,7 +121,8 @@ sema_up (struct semaphore *sema) //szl
   if (!list_empty (&sema->waiters)) {
     list_less_func *a= list_less_cmp;
     list_sort(&sema->waiters,a,NULL);
-    thread_unblock(list_entry (list_pop_front (&sema->waiters),struct thread, elem));//在sema_up时排序，能够彻底解决waiters队列中任意多的线程的actual priority变化问题
+    thread_unblock(list_entry (list_pop_front (&sema->waiters),struct thread, elem));
+    // 在sema_up时排序，能够彻底解决waiters队列中任意多的线程的actual priority变化问题
   }
   sema->value++;
   thread_yield(); //唤醒后交出资源
@@ -205,7 +207,8 @@ lock_acquire (struct lock *lock)
   
   thread_current()->acquired_lock=lock;//当前线程的请求锁
   struct lock *tmp=lock;
-  while(tmp!=NULL && tmp->holder!=NULL && tmp->holder->priority<thread_current()->priority){ //递归遍历上层锁的占有线程的请求锁，donate上层锁的priority
+  while(tmp!=NULL && tmp->holder!=NULL && tmp->holder->priority<thread_current()->priority){
+    //递归遍历上层锁的占有线程的请求锁，向上层线程donate
     tmp->holder->priority=thread_current()->priority;
     tmp = tmp->holder->acquired_lock;
   }
@@ -215,8 +218,10 @@ lock_acquire (struct lock *lock)
 
   sema_down (&lock->semaphore);
 
-  thread_current()->acquired_lock=NULL; //该锁已经获得，没有请求锁
-  list_push_back(&thread_current()->hold_lock,&lock->elem);//放入该线程的占有锁的队列
+  thread_current()->acquired_lock=NULL;
+  //该锁已经获得，没有请求锁
+  list_push_back(&thread_current()->hold_lock,&lock->elem);
+  //放入该线程的占有锁的队列
 
 
   lock->holder = thread_current ();//更新锁的占有线程为当前线程
