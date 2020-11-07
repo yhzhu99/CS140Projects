@@ -308,7 +308,7 @@ in synch.c/h
 
 ![](img/task2-9.png)
 
-Step 1:main thread acquire(1),create(33)
+##### Step 1:main thread acquire(1),create(33)
 
 Thread A
 
@@ -330,7 +330,9 @@ Thread B
 | Locks             | NULL  |
 | Lock_blocked_by   | NULL  |
 
-Step 2:B acquire (1)
+
+
+##### Step 2:B acquire (1)
 
 Thread A
 
@@ -352,7 +354,9 @@ Thread B
 | Locks             | NULL                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-Step 3:main thread:create(32),  C:acquire(2),acquire(1)
+
+
+##### Step 3:main thread:create(32),  C:acquire(2),acquire(1)
 
 Thread A
 
@@ -386,7 +390,7 @@ Thread C
 
 
 
-Step 4: main thread: create(41), D:acquire(2)
+##### Step 4: main thread: create(41), D:acquire(2)
 
 Thread A
 
@@ -430,7 +434,7 @@ Thread D
 
 
 
-Step 5: main thread:release(1)
+##### Step 5: main thread:release(1)
 
 Thread A
 
