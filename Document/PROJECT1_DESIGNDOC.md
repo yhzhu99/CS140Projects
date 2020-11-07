@@ -455,6 +455,16 @@ struct, it may be avoided using it.
 > B7: Why did you choose this design?  In what ways is it superior to
 > another design you considered?
 
+在DATA STRUCTURE部分，我们已经指明有三种方式可以做到有序：
+
+1. 在线程插入至list中时，即通过比较函数，将其根据优先级顺序，插入至相应的位置。(插入$O(n)$，取出$O(1)$)
+2. 不改变插入的函数，而是在取出某一个线程时，根据其优先级的要求，如取出当前list中优先级最高的线程。(插入$O(1)$，取出$O(n)$)
+3. 在每一次取出时，进行排序，然后取出队列中的第一个线程。(插入$O(1)$，取出$O(nlog(n))$)
+
+我们优先考虑时间复杂度，选择了方式1。该方式有三者中最快的获取线程速度。
+
+而加入了donation部分后，所有的线程在被插入至列表中时，都有可能被donate，改变掉其priority。因此，一切在插入时进行排序的方式是无效的。所以我们在后续的实现中，多采用了方式2和3。
+
 ## QUESTION 3: ADVANCED SCHEDULER
 
 ### DATA STRUCTURES
