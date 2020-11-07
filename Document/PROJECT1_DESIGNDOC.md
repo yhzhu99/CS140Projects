@@ -429,6 +429,7 @@ thread_set_priority (int new_priority)
   if(list_empty(&cur->hold_lock)||new_priority>cur->priority){
     // 只有当该线程不占有任何锁，即不可能被donate，或者更新的priority大于当前priority，需要强制更新。
     // 此时才更新actual priority
+    // 若此时另一个线程donate了，可能会产生冲突！
     cur->priority = new_priority;
     // 该线程的当前priority为new_priority
   }
@@ -438,17 +439,9 @@ thread_set_priority (int new_priority)
 }
 ```
 
-在优先级捐赠过程中，持有锁的线程可能会因为被捐赠优先级而改变priority。若线程本身也要改变其priority，二者的执行顺序不同，或会造成不一样的结果。
+在优先级捐赠过程中，持有锁的线程可能会因为被捐赠优先级而改变priority。若线程本身也要改变其priority，二者的执行顺序不同，可能造成混乱。
 
-A: During priority donation, the lock holder’s priority may be set by it’s donor,
-at the mean time, the thread itself may want to change the priority.
-If the donor and the thread itself set the priority in a different order, may 
-cause a different result. 
-
-We disable the interrupt to prevent it happens. It can not be avoided using a lock
-in our implementation, since we didn’t provide the interface and structure to 
-share a lock between donor and the thread itself. If we add a lock to the thread 
-struct, it may be avoided using it. 
+我们的实现方式中需要通过禁用中断来避免这种冲突的存在。可以用锁：给所有的运行线程上锁，即模拟成单线程。
 
 ### RATIONALE
 
