@@ -1,4 +1,4 @@
-# PROJECT 1: THREADS DESIGN DOCUMENT
+#  PROJECT 1: THREADS DESIGN DOCUMENT
 
 ## GROUP
 
@@ -306,7 +306,173 @@ in synch.c/h
 > Use ASCII art to diagram a nested donation.  (Alternately, submit a
 > .png file.)
 
-[TODO]
+![](img/task2-9.png)
+
+Step 1:main thread acquire(1),create(33)
+
+Thread A
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 31                            |
+| Priority_original | 31                            |
+| is_donated        | False                         |
+| Locks             | {lock_1 (priority_lock = -1)} |
+| Lock_blocked_by   | NULL                          |
+
+Thread B
+
+| Member            | Value |
+| ----------------- | ----- |
+| Priority          | 33    |
+| Priority_original | 33    |
+| is_donated        | False |
+| Locks             | NULL  |
+| Lock_blocked_by   | NULL  |
+
+Step 2:B acquire (1)
+
+Thread A
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 33                            |
+| Priority_original | 31                            |
+| is_donated        | True                          |
+| Locks             | {lock_1 (priority_lock = -1)} |
+| Lock_blocked_by   | NULL                          |
+
+Thread B
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 33                            |
+| Priority_original | 33                            |
+| is_donated        | False                         |
+| Locks             | NULL                          |
+| Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
+
+Step 3:main thread:create(32),  C:acquire(2),acquire(1)
+
+Thread A
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 33                            |
+| Priority_original | 31                            |
+| is_donated        | True                          |
+| Locks             | {lock_1 (priority_lock = -1)} |
+| Lock_blocked_by   | NULL                          |
+
+Thread B
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 33                            |
+| Priority_original | 33                            |
+| is_donated        | False                         |
+| Locks             | NULL                          |
+| Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
+
+Thread C
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 32                            |
+| Priority_original | 32                            |
+| is_donated        | False                         |
+| Locks             | {lock_2 (priority_lock = -1)} |
+| Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
+
+
+
+Step 4: main thread: create(41), D:acquire(2)
+
+Thread A
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 41                            |
+| Priority_original | 31                            |
+| is_donated        | True                          |
+| Locks             | {lock_1 (priority_lock = -1)} |
+| Lock_blocked_by   | NULL                          |
+
+Thread B
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 33                            |
+| Priority_original | 33                            |
+| is_donated        | False                         |
+| Locks             | NULL                          |
+| Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
+
+Thread C
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 41                            |
+| Priority_original | 32                            |
+| is_donated        | True                          |
+| Locks             | {lock_2 (priority_lock = -1)} |
+| Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
+
+Thread D
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 41                            |
+| Priority_original | 41                            |
+| is_donated        | False                         |
+| Locks             | NULL                          |
+| Lock_blocked_by   | {lock_2 (priority_lock = -1)} |
+
+
+
+Step 5: main thread:release(1)
+
+Thread A
+
+| Member            | Value |
+| ----------------- | ----- |
+| Priority          | 31    |
+| Priority_original | 31    |
+| is_donated        | True  |
+| Locks             | NULL  |
+| Lock_blocked_by   | NULL  |
+
+Thread B
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 33                            |
+| Priority_original | 33                            |
+| is_donated        | False                         |
+| Locks             | NULL                          |
+| Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
+
+Thread C
+
+| Member            | Value                                                       |
+| ----------------- | ----------------------------------------------------------- |
+| Priority          | 41                                                          |
+| Priority_original | 32                                                          |
+| is_donated        | True                                                        |
+| Locks             | {lock_2 (priority_lock = -1)},{lock_1 (priority_lock = -1)} |
+| Lock_blocked_by   | NULL                                                        |
+
+Thread D
+
+| Member            | Value                         |
+| ----------------- | ----------------------------- |
+| Priority          | 41                            |
+| Priority_original | 41                            |
+| is_donated        | False                         |
+| Locks             | NULL                          |
+| Lock_blocked_by   | {lock_2 (priority_lock = -1)} |
+
+
 
 ### ALGORITHMS
 
