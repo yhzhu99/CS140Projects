@@ -44,7 +44,7 @@
 
 ### 需求分析
 
-初始程序中通过忙等待机制来实现`timer_sleep`函数。但是这种忙等待机制的实现方式会过多的占用计算机系统的资源，对于某些资源分配不足的计算机系统（比如本组实验使用的Ubuntu虚拟机），难以通过第一部分的部分测试数据点(比如`alarm_simultaneous`)。这是因为忙等待通过轮询的方式，在每个时间片将每个线程都放入`running_list`中运行以判断是否达到睡眠时间，并且将没有达到睡眠时间的线程重新放回`ready_list`中等待下一次的轮询。使用这种忙等待机制/轮询的方法，在每一个时间片中，需要进行太多的工作，以至于在资源分配不足的情况下无法在一个时间片中执行完成本应该在一个时间片中执行完毕的工作。
+初始程序中通过忙等待机制来实现`timer_sleep())`函数。但是这种忙等待机制的实现方式会过多的占用计算机系统的资源，对于某些资源分配不足的计算机系统（比如本组实验使用的Ubuntu虚拟机），难以通过第一部分的部分测试数据点(比如`alarm_simultaneous`)。这是因为忙等待通过轮询的方式，在每个时间片将每个线程都放入`running_list`中运行以判断是否达到睡眠时间，并且将没有达到睡眠时间的线程重新放回`ready_list`中等待下一次的轮询。使用这种忙等待机制/轮询的方法，在每一个时间片中，需要进行太多的工作，以至于在资源分配不足的情况下无法在一个时间片中执行完成本应该在一个时间片中执行完毕的工作。
 
 ![](img/task1-1.png)
 
@@ -86,27 +86,40 @@
 > A2: Briefly describe what happens in a call to timer_sleep(),
 > including the effects of the timer interrupt handler.
 
-- `timer_sleep()`  
+```c
+/* Sleeps for approximately TICKS timer ticks.  Interrupts must
+   be turned on. */
+void
+timer_sleep (int64_t ticks) //zyh hpf zcy szl
+{
+  if (ticks <= 0){return;} 
+  ASSERT (intr_get_level () == INTR_ON);
+  enum intr_level old_level = intr_disable ();
+  struct thread *current_thread = thread_current ();
+  // 设置睡眠时间
+  current_thread->ticks_blocked = ticks;
+  pushin_blocked_list();
+  thread_block ();
+  intr_set_level (old_level);
+}
+```
 
-```
-判断正在运行中的线程需要的睡眠时间是否大于0，是则执行步骤2，否则return
-禁用中断
-设置当前线程的ticks_blocked为ticks，即保存该线程需要睡眠的时间
-将该线程放入blocked_list队列，并设置状态为THREAD_BLOCKED
-还原线程中断状态
-```
+1. 判断正在运行中的线程需要的睡眠时间是否大于0，是则执行步骤2，否则`return`
+2. 禁用中断
+3. 设置当前线程的`ticks_blocked`为`ticks`，即保存该线程需要睡眠的时间
+4. 将该线程放入`blocked_list`队列，并设置状态为`THREAD_BLOCKED`
+5. 还原线程中断状态
 
-- `timer_interrupt()`
 
-```
-更新当前系统时间片 
-遍历blocked_list中所有的线程，执行第3步
-该线程的ticks_blocked--
-判断ticks_blocked是否为0，如果是则执行第5步，否则遍历下一个线程，执行第3步
-将该线程从blocked_list中移除
-将线程放入ready_list队列中，并将status设置为THREAD_READY
-遍历下一个线程直至遍历完blocked_list中所有线程
-```
+in `timer_interrupt()`
+
+1. 更新当前系统时间片 
+2. 遍历`blocked_list`中所有的线程，执行第3步
+3. 该线程的`ticks_blocked--`
+4. 判断`ticks_blocked`是否为0，如果是则执行第5步，否则遍历下一个线程，执行第3步
+5. 将该线程从`blocked_list`中移除
+6. 将线程放入`ready_list`队列中，并将`status`设置为`THREAD_READY`
+7. 遍历下一个线程直至遍历完`blocked_list`中所有线程
 
 **Effects**
 
@@ -241,7 +254,7 @@ priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的�
 
 考虑到优先级捐赠是和lock锁相关的行为，所以在涉及到thread和锁相关系的函数中，需要补充有关于donate这一行为的部分。比如说，在`lock_acquire()`和`lock_release()`这两个相对的函数中，在获取锁和释放锁的同时，需要改变当前thread自身或者是其他thread的权重值。如果按照最简单的设计思路来考虑，那么自然很容易想到一中简单方案，即在acquire的时候，更新占有当前锁的thread的权重值，在release的时候，恢复当前thread的权重值为原始值。但是这样的思路有明显的问题，只能通过one在内的少数测试点，因为这样的捐赠方案没有办法处理类似于多个thread竞争同一个锁，多级锁连续传递线程权重等情况。
 
-在这种简单的方案无法达成实验的目标后，需要考虑改进原有的捐赠策略。本组发现，原先的怨憎策略主要是在多个thread竞争同一个锁，多级锁连续传递线程权重等情况下无法正确的更新thread 的权重值。为了解决这样的状况，本组考虑，添加两个list。在lock中添加thread_list用来存储acquire该lock的thread，以及当前占有该lock的thread，如此，便可以用thread_list中的thread的权重去更新当前占有该lock的thread的权重。在thread中添加`lock_list`，当一个thread占有了多个lock的时候，能够选取当前权重“最大”的lock。为了保证捐赠的正确性，必须在每次更新的时候，对当前thread对每个lock中的每个thread，寻找最大权重。同时，如果更新了thread的权重，则必须更新该线程“上级”的线程，也就是占有该线程acquire的锁的线程。
+在这种简单的方案无法达成实验的目标后，需要考虑改进原有的捐赠策略。本组发现，原先的怨憎策略主要是在多个thread竞争同一个锁，多级锁连续传递线程权重等情况下无法正确的更新thread 的权重值。为了解决这样的状况，本组考虑，添加两个list。在lock中添加`thread_list`用来存储acquire该lock的thread，以及当前占有该lock的thread，如此，便可以用`thread_list`中的thread的权重去更新当前占有该lock的thread的权重。在thread中添加`lock_list`，当一个thread占有了多个lock的时候，能够选取当前权重“最大”的lock。为了保证捐赠的正确性，必须在每次更新的时候，对当前thread对每个lock中的每个thread，寻找最大权重。同时，如果更新了thread的权重，则必须更新该线程“上级”的线程，也就是占有该线程acquire的锁的线程。
 
 ### DATA STRUCTURES
 
@@ -314,9 +327,9 @@ in `synch.c/h`
 
 ![](img/task2-9.png)
 
-- Step 1: main thread acquire(1),create(33)
+- Step 1: main thread acquire(1), create(33)
 
-Thread A
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -326,19 +339,19 @@ Thread A
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-Thread B
+**Thread B**
 
 | Member            | Value |
 | ----------------- | ----- |
 | Priority          | 33    |
 | Priority_original | 33    |
 | is_donated        | False |
-| Locks             | NULL  |
+| Locks             | {}  |
 | Lock_blocked_by   | NULL  |
 
 - Step 2: B acquire (1)
 
-Thread A
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -348,19 +361,19 @@ Thread A
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-Thread B
+**Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
 | Priority          | 33                            |
 | Priority_original | 33                            |
 | is_donated        | False                         |
-| Locks             | NULL                          |
+| Locks             | {}                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
 - Step 3: main thread: create(32), C:acquire(2), acquire(1)
 
-Thread A
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -370,7 +383,7 @@ Thread A
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-Thread B
+**Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -380,7 +393,7 @@ Thread B
 | Locks             | NULL                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-Thread C
+**Thread C**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -392,7 +405,7 @@ Thread C
 
 - Step 4: main thread: create(41), D: acquire(2)
 
-Thread A
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -402,17 +415,17 @@ Thread A
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-Thread B
+**Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
 | Priority          | 33                            |
 | Priority_original | 33                            |
 | is_donated        | False                         |
-| Locks             | NULL                          |
+| Locks             | {}                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-Thread C
+**Thread C**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -422,19 +435,19 @@ Thread C
 | Locks             | {lock_2 (priority_lock = -1)} |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-Thread D
+**Thread D**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
 | Priority          | 41                            |
 | Priority_original | 41                            |
 | is_donated        | False                         |
-| Locks             | NULL                          |
+| Locks             | {}                          |
 | Lock_blocked_by   | {lock_2 (priority_lock = -1)} |
 
 - Step 5: main thread: release(1)
 
-Thread A
+**Thread A**
 
 | Member            | Value |
 | ----------------- | ----- |
@@ -444,17 +457,17 @@ Thread A
 | Locks             | NULL  |
 | Lock_blocked_by   | NULL  |
 
-Thread B
+**Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
 | Priority          | 33                            |
 | Priority_original | 33                            |
 | is_donated        | False                         |
-| Locks             | NULL                          |
+| Locks             | {}                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-Thread C
+**Thread C**
 
 | Member            | Value                                                       |
 | ----------------- | ----------------------------------------------------------- |
@@ -464,14 +477,14 @@ Thread C
 | Locks             | {lock_2 (priority_lock = -1)},{lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                                                        |
 
-Thread D
+**Thread D**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
 | Priority          | 41                            |
 | Priority_original | 41                            |
 | is_donated        | False                         |
-| Locks             | NULL                          |
+| Locks             | {}                          |
 | Lock_blocked_by   | {lock_2 (priority_lock = -1)} |
 
 ### ALGORITHMS
@@ -626,11 +639,49 @@ thread_set_priority (int new_priority)
 
 ## QUESTION 3: ADVANCED SCHEDULER
 
+### 需求分析
+
+### 设计思路
+
 ### DATA STRUCTURES
 
 > C1: Copy here the declaration of each new or changed `struct` or
 > `struct` member, global or static variable, `typedef`, or
 > enumeration.  Identify the purpose of each in 25 words or less.
+
+in `thread.c/h`
+
+- [NEW]`int nice;`
+  - 题目中所必需的nice值
+- [NEW]`int64_t recent_cpu;`
+  - 题目中所必需的recent_cpu值
+- [NEW]`void update_cpu(struct thread *t, void *aux UNUSED);`
+  - 根据题目要求，编写该函数，以更新`recent_cpu`值
+- [NEW]`void update_priority(struct thread *t, void *aux UNUSED);`
+  - 根据题目要求，编写该函数，以更新线程的priority值
+- [NEW]`void update_load_avg(void);`
+  - 根据题目要求，编写该函数，以更新`load_avg`值
+- [NEW]`void increment_recent_cpu(void);`
+  - 根据题目要求，编写该函数，以递增`recent_cpu`值
+- [CHANGED]`void thread_set_nice (int nice UNUSED);`
+  - implemented
+- [CHANGED]`void thread_init(void)`
+  - 初始化`load_avg=0`
+- [CHANGED]`int thread_get_nice (void)`
+  - implemented. Returns the current thread's nice value.
+- [CHANGED]`int thread_get_load_avg(void)`
+  - implemented. Returns 100 times the current system load average, rounded to the nearest integer.
+- [CHANGED]` int thread_get_recent_cpu (void)`
+  - implemented. Returns 100 times the current thread's recent_cpu value, rounded to the nearest integer.
+
+in `timer.c`
+
+- [CHANGED]`static void timer_interrupt (struct intr_frame *args UNUSED)`
+  - 根据题意update `load_avg`, `recent_cpu`, `priority`
+
+[NEW] `fixed-point.h`
+
+- 以宏定义的方式，添加浮点数相关运算
 
 ### ALGORITHMS
 
@@ -641,17 +692,16 @@ thread_set_priority (int new_priority)
 
 | timerticks | recent_cpu A | recent_cpu B | recent_cpu C | priority A | priority B | priority C | thread to run |
 | ---------- | ------------ | ------------ | ------------ | ---------- | ---------- | ---------- | ------------- |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
-|            |              |              |              |            |            |            |               |
+| 0          | 0            | 1            | 2            | 63         | 61         | 59         | A             |
+| 4          | 4            | 1            | 2            | 62         | 61         | 59         | A             |
+| 8          | 7            | 2            | 4            | 61         | 61         | 58         | B             |
+| 12         | 6            | 6            | 6            | 61         | 59         | 58         | A             |
+| 16         | 9            | 6            | 7            | 60         | 59         | 57         | A             |
+| 20         | 12           | 6            | 8            | 60         | 59         | 57         | A             |
+| 24         | 15           | 6            | 9            | 59         | 59         | 57         | B             |
+| 28         | 14           | 10           | 10           | 59         | 58         | 57         | A             |
+| 32         | 16           | 10           | 11           | 58         | 58         | 56         | B             |
+| 36         | 15           | 14           | 12           | 59         | 57         | 56         | A             |
 
 
 
