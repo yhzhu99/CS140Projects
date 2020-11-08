@@ -202,24 +202,26 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-  
-  thread_current()->acquired_lock=lock;//当前线程的请求锁
-  struct lock *tmp=lock;
-  while(tmp!=NULL && tmp->holder!=NULL && tmp->holder->priority<thread_current()->priority){ //递归遍历上层锁的占有线程的请求锁，donate上层锁的priority
-    tmp->holder->priority=thread_current()->priority;
-    tmp = tmp->holder->acquired_lock;
+  if(!thread_mlfqs){
+    thread_current()->acquired_lock=lock;//当前线程的请求锁
+    struct lock *tmp=lock;
+    while(tmp!=NULL && tmp->holder!=NULL && tmp->holder->priority<thread_current()->priority){ //递归遍历上层锁的占有线程的请求锁，donate上层锁的priority
+      tmp->holder->priority=thread_current()->priority;
+      tmp = tmp->holder->acquired_lock;
+    }
+    // if(lock->holder!=NULL&&lock->holder->priority<thread_current()->priority){
+    //   lock->holder->priority=thread_current()->priority;
+    // }
+    sema_down (&lock->semaphore);
+
+    thread_current()->acquired_lock=NULL; //该锁已经获得，没有请求锁
+    list_push_back(&thread_current()->hold_lock,&lock->elem);//放入该线程的占有锁的队列
   }
-  // if(lock->holder!=NULL&&lock->holder->priority<thread_current()->priority){
-  //   lock->holder->priority=thread_current()->priority;
-  // }
-
-  sema_down (&lock->semaphore);
-
-  thread_current()->acquired_lock=NULL; //该锁已经获得，没有请求锁
-  list_push_back(&thread_current()->hold_lock,&lock->elem);//放入该线程的占有锁的队列
-
-
+  else{
+    sema_down(&lock->semaphore);
+  }
   lock->holder = thread_current ();//更新锁的占有线程为当前线程
+
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -252,24 +254,24 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-
-  list_remove(&lock->elem);//释放锁，从占有锁的列表中移除
-  lock->holder = NULL;//锁的占有者为空
-
-  //遍历剩下占有锁中所有竞争线程，找到这些线程中priority的最大值，更新当前线程的priority
-  struct list_elem *e;
-  int max_priority = thread_current()->original_priority;
-  for(e=list_begin(&thread_current()->hold_lock);e!=list_end(&thread_current()->hold_lock);e=list_next(e)){
-    struct lock *tmplock= list_entry(e, struct lock ,elem );
-    struct list_elem *b;
-    for (b=list_begin(&tmplock->semaphore.waiters);b!=list_end(&tmplock->semaphore.waiters);b=list_next(b)){
-      struct thread *tmpthread = list_entry(b,struct thread ,elem);
-      if(tmpthread->priority>max_priority)max_priority=tmpthread->priority;
+  if(!thread_mlfqs){
+    list_remove(&lock->elem);//释放锁，从占有锁的列表中移除
+    //遍历剩下占有锁中所有竞争线程，找到这些线程中priority的最大值，更新当前线程的priority
+    struct list_elem *e;
+    int max_priority = thread_current()->original_priority;
+    for(e=list_begin(&thread_current()->hold_lock);e!=list_end(&thread_current()->hold_lock);e=list_next(e)){
+      struct lock *tmplock= list_entry(e, struct lock ,elem );
+      struct list_elem *b;
+      for (b=list_begin(&tmplock->semaphore.waiters);b!=list_end(&tmplock->semaphore.waiters);b=list_next(b)){
+        struct thread *tmpthread = list_entry(b,struct thread ,elem);
+        if(tmpthread->priority>max_priority)max_priority=tmpthread->priority;
+      }
     }
+    thread_current()->priority=max_priority;
   }
   
-  thread_current()->priority=max_priority;
-  
+
+  lock->holder = NULL;//锁的占有者为空
   sema_up (&lock->semaphore);
 }
 

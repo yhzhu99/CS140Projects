@@ -93,7 +93,8 @@ struct thread
     struct list hold_lock;              /* 占有的锁列表. */
     struct lock *acquired_lock;         /* 请求的锁. */
     struct list_elem allelem;           /* List element for all threads list. */
-
+    int nice;
+    int64_t recent_cpu;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. readylist*/
     struct list_elem bloelem;           /* List element. blockedlist created by szl */
@@ -150,4 +151,9 @@ void blocked_thread_check (struct thread *t, void *aux UNUSED);//szl
 void thread_check(struct thread*t, void *aun UNUSED);
 bool list_less_cmp(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED);
 bool blocked_list_less_cmp(const struct list_elem *a, const struct list_elem *b,void *aux UNUSED);
+
+void update_cpu(struct thread *t, void *aux UNUSED);
+void update_priority(struct thread *t, void *aux UNUSED);
+void update_load_avg(void);
+void increment_recent_cpu(void);
 #endif /* threads/thread.h */

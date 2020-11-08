@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -40,7 +41,7 @@ static struct thread *initial_thread;
 
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
-
+int load_avg;
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
@@ -105,6 +106,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&blocked_list);
+  load_avg=0;
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -424,6 +426,47 @@ void
 thread_set_nice (int nice UNUSED) 
 {
   /* Not yet implemented. */
+  thread_current()->nice=nice;
+  update_priority(thread_current(),NULL);
+  thread_yield();
+
+}
+void
+update_cpu(struct thread *t ,void *aux UNUSED){
+  if(t!=idle_thread){
+    //recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice
+    t->recent_cpu=MULTIPLY_X_BY_Y(DIVIDE_X_BY_Y(MULTIPLY_X_BY_N(load_avg,2),MULTIPLY_X_BY_N(load_avg,2)+CONVERT_N_TO_FIXED_POINT(1)),t->recent_cpu)+
+    CONVERT_N_TO_FIXED_POINT(t->nice);
+  }
+}
+
+void 
+update_priority(struct thread *t , void *aux UNUSED){
+  if(t!=idle_thread){
+    //priority=PRI_MAX-(recent_cpu/4)-(nice*2);
+    t->priority = CONVERT_X_TO_INTEGER_NEAREST(CONVERT_N_TO_FIXED_POINT(PRI_MAX)-
+    DIVIDE_X_BY_N(t->recent_cpu,4)-CONVERT_N_TO_FIXED_POINT(2*t->nice));
+    if(t->priority>PRI_MAX)t->priority=PRI_MAX;
+    if(t->priority<PRI_MIN)t->priority=PRI_MIN;
+  }
+}
+
+void
+update_load_avg(void){
+  //load_avg = (59/60)*load_avg + (1/60)*ready_threads.
+  int ready_threads = list_size(&ready_list);
+  if (thread_current() != idle_thread){
+    ready_threads++;
+  }
+  load_avg = ADD_X_AND_Y(DIVIDE_X_BY_N(MULTIPLY_X_BY_N(load_avg,59),60),DIVIDE_X_BY_N(CONVERT_N_TO_FIXED_POINT(ready_threads),60));
+}
+
+/* increment thread_current()->recent_cpu by 1. */
+void 
+increment_recent_cpu(void){
+  if(thread_current()!=idle_thread){
+    thread_current()->recent_cpu = ADD_X_AND_N(thread_current()->recent_cpu,1);
+  }
 }
 
 /* Returns the current thread's nice value. */
@@ -431,24 +474,23 @@ int
 thread_get_nice (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
-/* Returns 100 times the system load average. */
+/* Returns 100 times the current system load average, rounded to the nearest integer. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return CONVERT_X_TO_INTEGER_NEAREST(MULTIPLY_X_BY_N(load_avg,100));
 }
 
-/* Returns 100 times the current thread's recent_cpu value. */
+/* Returns 100 times the current thread's recent_cpu value, rounded to the nearest integer. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return CONVERT_X_TO_INTEGER_NEAREST(MULTIPLY_X_BY_N(thread_current()->recent_cpu,100));
 }
+
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
@@ -539,6 +581,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->original_priority = priority;
   t->magic = THREAD_MAGIC;
   t->acquired_lock = NULL;
+  t->nice = 0;
+  t->recent_cpu = 0;
   list_init(&t->hold_lock);
   old_level = intr_disable ();
   list_less_func *a =list_less_cmp;
