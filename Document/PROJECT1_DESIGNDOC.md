@@ -741,8 +741,12 @@ the quarter.
 > In your opinion, was this assignment, or any one of the three problems
 > in it, too easy or too hard?  Did it take too long or too little time?
 
+All of these three are too hard for our team. It takes us over 100 hours to finish the assignment!
+
 > Did you find that working on a particular part of the assignment gave
 > you greater insight into some aspect of OS design?
+
+Yes. Especially the last part (BSD Scheduling) -- the thought of
 
 > Is there some particular fact or hint we should give students in
 > future quarters to help them solve the problems?  Conversely, did you
