@@ -329,7 +329,7 @@ in `synch.c/h`
 
 - Step 1: main thread acquire(1), create(33)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -339,7 +339,7 @@ in `synch.c/h`
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value |
 | ----------------- | ----- |
@@ -351,7 +351,7 @@ in `synch.c/h`
 
 - Step 2: B acquire (1)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -361,7 +361,7 @@ in `synch.c/h`
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -373,7 +373,7 @@ in `synch.c/h`
 
 - Step 3: main thread: create(32), C:acquire(2), acquire(1)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -383,7 +383,7 @@ in `synch.c/h`
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -393,7 +393,7 @@ in `synch.c/h`
 | Locks             | NULL                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-**Thread C**
+**Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -405,7 +405,7 @@ in `synch.c/h`
 
 - Step 4: main thread: create(41), D: acquire(2)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -415,7 +415,7 @@ in `synch.c/h`
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -425,7 +425,7 @@ in `synch.c/h`
 | Locks             | {}                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-**Thread C**
+**Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -435,7 +435,7 @@ in `synch.c/h`
 | Locks             | {lock_2 (priority_lock = -1)} |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-**Thread D**
+**Thread C**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -447,7 +447,7 @@ in `synch.c/h`
 
 - Step 5: main thread: release(1)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value |
 | ----------------- | ----- |
@@ -457,7 +457,7 @@ in `synch.c/h`
 | Locks             | NULL  |
 | Lock_blocked_by   | NULL  |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -467,7 +467,7 @@ in `synch.c/h`
 | Locks             | {}                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-**Thread C**
+**Thread B**
 
 | Member            | Value                                                       |
 | ----------------- | ----------------------------------------------------------- |
@@ -477,7 +477,7 @@ in `synch.c/h`
 | Locks             | {lock_2 (priority_lock = -1)},{lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                                                        |
 
-**Thread D**
+**Thread C**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
