@@ -329,7 +329,7 @@ in `synch.c/h`
 
 - Step 1: main thread acquire(1), create(33)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -339,7 +339,7 @@ in `synch.c/h`
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value |
 | ----------------- | ----- |
@@ -351,7 +351,7 @@ in `synch.c/h`
 
 - Step 2: B acquire (1)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -361,7 +361,7 @@ in `synch.c/h`
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -373,7 +373,7 @@ in `synch.c/h`
 
 - Step 3: main thread: create(32), C:acquire(2), acquire(1)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -383,7 +383,7 @@ in `synch.c/h`
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -393,7 +393,7 @@ in `synch.c/h`
 | Locks             | NULL                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-**Thread C**
+**Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -405,7 +405,7 @@ in `synch.c/h`
 
 - Step 4: main thread: create(41), D: acquire(2)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -415,7 +415,7 @@ in `synch.c/h`
 | Locks             | {lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                          |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -425,7 +425,7 @@ in `synch.c/h`
 | Locks             | {}                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-**Thread C**
+**Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -435,7 +435,7 @@ in `synch.c/h`
 | Locks             | {lock_2 (priority_lock = -1)} |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-**Thread D**
+**Thread C**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -447,7 +447,7 @@ in `synch.c/h`
 
 - Step 5: main thread: release(1)
 
-**Thread A**
+**Main Thread**
 
 | Member            | Value |
 | ----------------- | ----- |
@@ -457,7 +457,7 @@ in `synch.c/h`
 | Locks             | NULL  |
 | Lock_blocked_by   | NULL  |
 
-**Thread B**
+**Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -467,7 +467,7 @@ in `synch.c/h`
 | Locks             | {}                          |
 | Lock_blocked_by   | {lock_1 (priority_lock = -1)} |
 
-**Thread C**
+**Thread B**
 
 | Member            | Value                                                       |
 | ----------------- | ----------------------------------------------------------- |
@@ -477,7 +477,7 @@ in `synch.c/h`
 | Locks             | {lock_2 (priority_lock = -1)},{lock_1 (priority_lock = -1)} |
 | Lock_blocked_by   | NULL                                                        |
 
-**Thread D**
+**Thread C**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
@@ -641,7 +641,41 @@ thread_set_priority (int new_priority)
 
 ### 需求分析
 
+这一部分的基本需求是实现浮点数的功能。
+
+由于pintos的内核不支持浮点数这一功能。然而，在实验中，计算优先级需要用到recent_cpu和last_cpu等数值，而这些数值以及与这些数值有关的多种计算的中间结果和最终结果，很大可能性不是一个整数，必须用浮点数来进行计算和表示。在这种情况下，需求和功能之间的不匹配或多或少产生了一些不可避免也不可忽视的矛盾。
+
+面对这样的矛盾，就产生了一个需求：如何用已有的功能去实现浮点数的表示和运算。如果再将这个功能进一步的细化，作出具体的阐述，那么就是，如何在pintos这种不支持浮点数表示和运算的内核中，利用已有的整数的表示和运算，从而拓展到浮点数的领域上来。如果将这样的需求化简，用更为简洁的语言来描述的话，也可以说，使用整数来描述浮点数的存储与运算。
+
+本组将目光投向了Pintos项目的官方文档中，通过学习官方文档的内容，本组得知了这一部分的计算公式。
+
+每个线程有一个直接在其控制下的-20到20之间的nice值。每个线程还有一个优先级，介于0（`PRI_MIN`）到63（`PRI_MAX`）之间，并且每四个tick使用以下公式计算一次：
+
+$$priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)$$
+
+recent_cpu表示线程“最近”收到的CPU时间。在每个tick中，正在运行的线程的recent_cpu 会增加1。每秒钟，每个线程的recent_cpu 都将以这种方式使用如下公式更新：
+
+$$recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice$$
+
+load_avg用来评估过去一分钟准备运行的平均线程数。它在boot时初始化为0，并且每秒钟重新计算一次：
+
+$$load_avg = (59/60)*load_avg + (1/60)*ready_threads$$
+
+其中ready_threads是在更新时正在运行或准备运行的线程数（不包括空闲线程）。
+
+在上面的公式中，priority，nice和 ready_threads是整数，而last_cpu和load_avg 是实数。不幸的是，Pintos在内核中不支持浮点运算，因为它会使内核复杂化并减慢其速度。出于相同的原因，实际内核通常具有相同的限制。这意味着必须使用整数来模拟实际数量的计算。
+
 ### 设计思路
+
+本组综合分析以上的需求分析以及其中的具体公式，经过仔细的思考和广泛的讨论后，得出了初步的结论，就是使用整数来表示浮点数。回顾以前的学习内容中，我们知道整数和浮点数的表示方法，以及它们之间的相同与不同之处。考虑到以上情况，本组逐渐细化原本较为粗糙而模糊的初步结论，将初步结论进一步细化阐述。
+
+在本次的pintos实验中，用整数表示浮点数的基本思想是将整数的最右边的位视为代表小数。例如，我们可以将带符号的32位整数的最低14位指定为小数位，使得整数x表示实数$$x/(2 >>14)$$。
+
+这被称为17.14定点数字表示形式，因为小数点前有17位，小数点后有14位，以及一个符号位。17.14格式的数字最多表示$$(2>>31-1)/(2 >> 14)$$，约等于131,071.999。
+
+比如要计算上文需求分析中提到的59/60，就用$$\frac{59}{60} \times 2^{14}=16110$$得出结果存储进去。
+
+但是，考虑到如果有$$\frac{59}{60} \times \frac{59}{60}$$略小于1,而 $$16111\times 16111=259564321$$远大于$$2^{14}=16384$$，需要再向右移动14位$$259564321 \div 2^{14}=15842=2^{14}\times0.97$$才是正确的答案。同时，乘法可能会导致溢出问题。所以我们考虑使用int64来存储整数形式的浮点数。
 
 ### DATA STRUCTURES
 
