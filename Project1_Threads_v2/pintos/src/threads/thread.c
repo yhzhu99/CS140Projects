@@ -427,8 +427,15 @@ thread_get_original_priority(void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+  /* A positive nice, to the maximum of 20, decreases the priority of a thread 
+  and causes it to give up some CPU time it would otherwise receive. 
+  On the other hand, a negative nice, to the minimum of -20, 
+  tends to take away CPU time from other threads. */
+  if(nice>20)nice=20;
+  else if(nice<-20)nice=-20;
   thread_current()->nice=nice;
+  /*Sets the current thread's nice value to new_nice and recalculates the thread's priority based on the new value 
+  If the running thread no longer has the highest priority, yields. */
   update_priority(thread_current(),NULL);
   thread_yield();
 
