@@ -71,7 +71,8 @@ sema_down (struct semaphore *sema) //szl
     {
       // list_less_func *a=list_less_cmp;
       // list_insert_ordered(&sema->waiters, &thread_current ()->elem,a,NULL);
-      list_push_back(&sema->waiters,&thread_current()->elem); //将排序处理放在sema_up，方便线程被donate后的更新
+      list_push_back(&sema->waiters,&thread_current()->elem);
+      //将排序处理放在sema_up，方便线程被donate后的更新
       thread_block ();
     }
   sema->value--;
@@ -120,7 +121,8 @@ sema_up (struct semaphore *sema) //szl
   if (!list_empty (&sema->waiters)) {
     list_less_func *a= list_less_cmp;
     list_sort(&sema->waiters,a,NULL);
-    thread_unblock(list_entry (list_pop_front (&sema->waiters),struct thread, elem));//在sema_up时排序，能够彻底解决waiters队列中任意多的线程的actual priority变化问题
+    thread_unblock(list_entry (list_pop_front (&sema->waiters),struct thread, elem));
+    // 在sema_up时排序，能够彻底解决waiters队列中任意多的线程的actual priority变化问题
   }
   sema->value++;
   thread_yield(); //唤醒后交出资源

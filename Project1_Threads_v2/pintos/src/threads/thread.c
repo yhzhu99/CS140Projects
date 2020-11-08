@@ -403,7 +403,9 @@ thread_set_priority (int new_priority)
 {
   struct thread *cur=thread_current();
   cur->original_priority = new_priority;
-  if(list_empty(&cur->hold_lock)||new_priority>cur->priority){//只有当该线程不占有任何锁，即不可能被donate，或者更新的priority大于当前priority，需要强制更新。此时才更新actual priority
+  if(list_empty(&cur->hold_lock)||new_priority>cur->priority){
+    //只有当该线程不占有任何锁，即不可能被donate，或者更新的priority大于当前priority，需要强制更新。
+    //此时才更新actual priority
     cur->priority = new_priority;
     //thread_yield();
   }
