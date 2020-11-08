@@ -703,14 +703,18 @@ in `timer.c`
 | 32         | 16           | 10           | 11           | 58         | 58         | 56         | B             |
 | 36         | 15           | 14           | 12           | 59         | 57         | 56         | A             |
 
-
-
 > C3: Did any ambiguities in the scheduler specification make values
 > in the table uncertain?  If so, what rule did you use to resolve
 > them?  Does this match the behavior of your scheduler?
 
+此处，我们按照[文档：BSD Sschedular](http://www.scs.stanford.edu/15wi-cs140/pintos/pintos_7.html)计算recent_cpu的值时，存在模棱两可的情况。原因在于，当我们每隔4个tick，计算`load_avg`、`recent_cpu`、`priority`的时候，我们忽略了CPU做这些运算的时间。而当CPU做以上运算时，当前运行线程要`yield`转让资源。因此实际所隔的并非严格4个tick，我们无法严格知道究竟花了多少时间，在填这张表的时候只是简单地给`recent_cpu`每隔一个`tick`递增1。
+
+另外，当我们判断thread to run时，遇到了两个线程priority相同的情况。我们使用FCFS调度方式(先进先出)可解决这个问题。亦与以上表格的结果相一致。
+
 > C4: How is the way you divided the cost of scheduling between code
 > inside and outside interrupt context likely to affect performance?
+
+
 
 ### RATIONALE
 
