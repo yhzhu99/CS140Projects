@@ -283,11 +283,11 @@ priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的�
 - [CHANGED]`thread_create()`
   - 线程创建时，添加`yield()`。如果当前线程优先级比新创建的线程低，则当前线程需要转让资源。
 - [CHANGED]`pushin_blocked_list()`
-  - 修改线程插入至blocked_list中为按序插入
+  - 修改线程插入至`blocked_lis`t中为按序插入
 - [CHANGED]`thread_unblock()`
-  - 修改线程插入至ready_list中为按序插入
+  - 修改线程插入至`ready_list`中为按序插入
 - [CHANGED]`thread_yield()`
-  - 修改线程插入至ready_list中为按序插入
+  - 修改线程插入至`ready_list`中为按序插入
 - [CHANGED]`thread_set_priority()`
   - 每当线程更新(Sets the current thread's priority to NEW_PRIORITY)，添加`yield()`，直接转让资源
 - [CHANGED]`init_thread()`
