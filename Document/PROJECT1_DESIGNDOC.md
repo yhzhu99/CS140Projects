@@ -797,17 +797,10 @@ $$load\_avg = (59/60)\times load\_avg + (1/60)\times ready\_threads$$
 在`fixed-point.h`中，我们通过宏定义的方式实现了浮点数相关的运算。
 
 ```c
-#ifndef FIXED_POINT_H
-#define FIXED_POINT_H
-
-#define p 17
-#define q 14
-#define f (1<<q)
-
+#define f (1<<14)
 #define CONVERT_N_TO_FIXED_POINT(n)             ((n)*(f))
 #define CONVERT_X_TO_INTEGER_ZERO(x)            ((x)/(f))
 #define CONVERT_X_TO_INTEGER_NEAREST(x)         (((x)>=0)?(((x)+(f)/2)/(f)):(((x)-(f)/2)/(f)))
-
 #define ADD_X_AND_Y(x,y)                        ((x)+(y))
 #define SUBTRACT_Y_FROM_X(x,y)                  ((x)-(y))
 #define ADD_X_AND_N(x,n)                        ((x)+(n)*(f))
@@ -816,8 +809,6 @@ $$load\_avg = (59/60)\times load\_avg + (1/60)\times ready\_threads$$
 #define MULTIPLY_X_BY_N(x,n)                    ((x)*(n))
 #define DIVIDE_X_BY_Y(x,y)                      (((int64_t) (x))*(f)/(y))
 #define DIVIDE_X_BY_N(x,n)                      ((x)/(n))
-
-#endif
 ```
 
 宏定义作为仅字符串的替换，会在编译之前即被处理掉，不会占用内存。而编写函数的方式会被编译，会给它分配内存，占用更多的资源。
