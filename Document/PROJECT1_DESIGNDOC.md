@@ -56,7 +56,7 @@ Our GitHub repository is private. Please contact us if necessary.
 
 ### 3.1. 需求分析
 
-初始程序中通过忙等待机制来实现`timer_sleep())`函数。但是这种忙等待机制的实现方式会过多的占用计算机系统的资源，对于某些资源分配不足的计算机系统（比如本组实验使用的Ubuntu虚拟机），难以通过第一部分的部分测试数据点(比如`alarm_simultaneous`)。这是因为忙等待通过轮询的方式，在每个时间片将每个线程都放入`running_list`中运行以判断是否达到睡眠时间，并且将没有达到睡眠时间的线程重新放回`ready_list`中等待下一次的轮询。使用这种忙等待机制/轮询的方法，在每一个时间片中，需要进行太多的工作，以至于在资源分配不足的情况下无法在一个时间片中执行完成本应该在一个时间片中执行完毕的工作。
+初始程序中通过忙等待机制来实现`timer_sleep())`函数。但是这种忙等待机制的实现方式会过多的占用计算机系统的资源，对于某些资源分配不足的计算机系统（比如本组实验使用的Ubuntu虚拟机），难以通过第一部分的部分测试数据点(比如`alarm_simultaneous`)。这是因为忙等待通过轮询的方式，在每个时间片将每个线程都置为`running`状态执行一次，以判断是否达到睡眠时间，并且将没有达到睡眠时间的线程重新放回`ready_list`中等待下一次的轮询。使用这种忙等待机制/轮询的方法，在每一个时间片中，需要进行太多的工作，以至于在资源分配不足的情况下无法在一个时间片中执行完成本应该在一个时间片中执行完毕的工作。
 
 ![](img/task1-1.png)
 
@@ -344,20 +344,20 @@ priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的�
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 31                            |
-| `priority_original` | 31                            |
+| `priority`          | `31`                            |
+| `priority_original` | `31`                            |
 | `is_donated`        | `False`                         |
-| `locks`             | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{lock_1 (priority_lock = -1)}` |
 | `lock_blocked_by`   | `NULL`                          |
 
 **Thread A**
 
 | Member            | Value |
 | ----------------- | ----- |
-| `priority`          | 33    |
-| `priority_original` | 33    |
+| `priority`          | `33`    |
+| `priority_original` | `33`    |
 | `is_donated`        | `False` |
-| `locks`             | {}  |
+| `locks`             | `{}`  |
 | `lock_blocked_by`   | `NULL`  |
 
 - Step 2: B acquire (1)
@@ -366,21 +366,21 @@ priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的�
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 33                            |
-| `priority_original` | 31                            |
+| `priority`          | `33`                            |
+| `priority_original` | `31`                            |
 | `is_donated`        | `True`                          |
-| `locks`             | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{lock_1 (priority_lock = -1)}` |
 | `lock_blocked_by`   | `NULL`                          |
 
 **Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 33                            |
-| `priority_original` | 33                            |
+| `priority`          | `33`                            |
+| `priority_original` | `33`                            |
 | `is_donated`        | `False`                         |
-| `locks`             | {}                          |
-| `lock_blocked_by`   | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{}`                          |
+| `lock_blocked_by`   | `{lock_1 (priority_lock = -1)}` |
 
 - Step 3: main thread: create(32), C:acquire(2), acquire(1)
 
@@ -388,31 +388,31 @@ priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的�
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 33                            |
-| `priority_original` | 31                            |
+| `priority`          | `33`                            |
+| `priority_original` | `31`                            |
 | `is_donated`        | `True`                          |
-| `locks`             | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{lock_1 (priority_lock = -1)}` |
 | `lock_blocked_by`   | `NULL`                          |
 
 **Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 33                            |
-| `priority_original` | 33                            |
+| `priority`          | `33`                            |
+| `priority_original` | `33`                            |
 | `is_donated`        | `False`                         |
 | `locks`             | `NULL`                          |
-| `lock_blocked_by`   | {lock_1 (priority_lock = -1)} |
+| `lock_blocked_by`   | `{lock_1 (priority_lock = -1)}` |
 
 **Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 32                            |
-| `priority_original` | 32                            |
+| `priority`          | `32`                            |
+| `priority_original` | `32`                            |
 | `is_donated`        | `False`                         |
-| `locks`             | {lock_2 (priority_lock = -1)} |
-| `lock_blocked_by`   | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{lock_2 (priority_lock = -1)}` |
+| `lock_blocked_by`   | `{lock_1 (priority_lock = -1)}` |
 
 - Step 4: main thread: create(41), D: acquire(2)
 
@@ -420,41 +420,41 @@ priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的�
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 41                            |
-| `priority_original` | 31                            |
+| `priority`          | `41`                            |
+| `priority_original` | `31`                            |
 | `is_donated`        | `True`                          |
-| `locks`             | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{lock_1 (priority_lock = -1)}` |
 | `lock_blocked_by`   | `NULL`                          |
 
 **Thread A**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 33                            |
-| `priority_original` | 33                            |
+| `priority`          | `33`                            |
+| `priority_original` | `33`                            |
 | `is_donated`        | `False`                         |
-| `locks`             | {}                          |
-| `lock_blocked_by`   | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{}`                          |
+| `lock_blocked_by`   | `{lock_1 (priority_lock = -1)}` |
 
 **Thread B**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 41                            |
-| `priority_original` | 32                            |
+| `priority`          | `41`                            |
+| `priority_original` | `32`                            |
 | `is_donated`        | `True`                          |
-| `locks`             | {lock_2 (priority_lock = -1)} |
-| `lock_blocked_by`   | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{lock_2 (priority_lock = -1)}` |
+| `lock_blocked_by`   | `{lock_1 (priority_lock = -1)}` |
 
 **Thread C**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 41                            |
-| `priority_original` | 41                            |
+| `priority`          | `41`                            |
+| `priority_original` | `41`                            |
 | `is_donated`        | `False`                         |
-| `locks`             | {}                          |
-| `lock_blocked_by`   | {lock_2 (priority_lock = -1)} |
+| `locks`             | `{}`                          |
+| `lock_blocked_by`   | `{lock_2 (priority_lock = -1)}` |
 
 - Step 5: main thread: release(1)
 
@@ -462,8 +462,8 @@ priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的�
 
 | Member            | Value |
 | ----------------- | ----- |
-| `priority`          | 31    |
-| `priority_original` | 31    |
+| `priority`          | `31`    |
+| `priority_original` | `31`    |
 | `is_donated`        | `True`  |
 | `locks`             | `NULL`  |
 | `lock_blocked_by`   | `NULL`  |
@@ -472,31 +472,31 @@ priority-donate-chain需要考略权重通过不同的锁连续传递捐赠的�
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 33                            |
-| `priority_original` | 33                            |
+| `priority`          | `33`                            |
+| `priority_original` | `33`                            |
 | `is_donated`        | `False`                         |
-| `locks`             | {}                          |
-| `lock_blocked_by`   | {lock_1 (priority_lock = -1)} |
+| `locks`             | `{}`                          |
+| `lock_blocked_by`   | `{lock_1 (priority_lock = -1)}` |
 
 **Thread B**
 
 | Member            | Value                                                       |
 | ----------------- | ----------------------------------------------------------- |
-| `priority`          | 41                                                          |
-| `priority_original` | 32                                                          |
+| `priority`          | `41`                                                          |
+| `priority_original` | `32`                                                          |
 | `is_donated`        | `True`                                                        |
-| `locks`             | {lock_2 (priority_lock = -1)},{lock_1 (priority_lock = -1)} |
+| `locks`             | `{lock_2 (priority_lock = -1)},{lock_1 (priority_lock = -1)}` |
 | `lock_blocked_by`   | `NULL`                                                        |
 
 **Thread C**
 
 | Member            | Value                         |
 | ----------------- | ----------------------------- |
-| `priority`          | 41                            |
-| `priority_original` | 41                            |
+| `priority`          | `41`                            |
+| `priority_original` | `41`                            |
 | `is_donated`        | `False`                         |
-| `locks`             | {}                          |
-| `lock_blocked_by`   | {lock_2 (priority_lock = -1)} |
+| `locks`             | `{}`                          |
+| `lock_blocked_by`   | `{lock_2 (priority_lock = -1)}` |
 
 ### 4.4. ALGORITHMS
 
@@ -739,7 +739,7 @@ $$load\_avg = (59/60)\times load\_avg + (1/60)\times ready\_threads$$
 > scheduling decision and the priority and recent_cpu values for each
 > thread after each given number of timer ticks:
 
-| timer ticks | recent_cpu A | recent_cpu B | recent_cpu C | priority A | priority B | priority C | thread to run |
+| timer ticks | `recent_cpu` A | `recent_cpu` B | `recent_cpu` C | `priority` A | `priority` B | `priority` C | thread to run |
 | ---------- | ------------ | ------------ | ------------ | ---------- | ---------- | ---------- | ------------- |
 | 0          | 0            | 1            | 2            | 63         | 61         | 59         | A             |
 | 4          | 4            | 1            | 2            | 62         | 61         | 59         | A             |
@@ -779,7 +779,7 @@ $$load\_avg = (59/60)\times load\_avg + (1/60)\times ready\_threads$$
 优点：
 
 - 使用`int64_t`，模拟了浮点计算，提高了精度。
-- 通过引用`recent_cpu`、`load_av`g、`nice`来更新所有线程priority的思想使调度更为合理。
+- 通过引用`recent_cpu`、`load_avg`、`nice`来更新所有线程priority的思想使调度更为合理。
 
 缺点：
 
@@ -840,7 +840,7 @@ All of these three are too hard for our team. It takes us over 100 hours to fini
 > Did you find that working on a particular part of the assignment gave
 > you greater insight into some aspect of OS design?
 
-Yes. Especially the last part (BSD Scheduler) -- take more aspects in OS into account, the thought of balancing threads' different scheduling needs...
+Yes. Especially the last part (BSD Scheduler) -- taking more aspects in OS into account, the thought of balancing threads' different scheduling needs...
 
 > Is there some particular fact or hint we should give students in
 > future quarters to help them solve the problems?  Conversely, did you
