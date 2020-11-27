@@ -1,6 +1,5 @@
 #include "list.h"
 #include "../debug.h"
-#include<stdio.h>
 
 /* Our doubly linked lists have two header elements: the "head"
    just before the first element and the "tail" just after the
@@ -458,8 +457,6 @@ list_insert_ordered (struct list *list, struct list_elem *elem,
       break;
   return list_insert (e, elem);
 }
-
-
 
 /* Iterates through LIST and removes all but the first in each
    set of adjacent elements that are equal according to LESS

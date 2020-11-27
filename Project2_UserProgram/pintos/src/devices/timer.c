@@ -30,7 +30,6 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
-
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -88,17 +87,13 @@ timer_elapsed (int64_t then)
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
-timer_sleep (int64_t ticks) //zyh hpf zcy szl
+timer_sleep (int64_t ticks) 
 {
-  if (ticks <= 0){return;} 
+  int64_t start = timer_ticks ();
+
   ASSERT (intr_get_level () == INTR_ON);
-  enum intr_level old_level = intr_disable ();
-  struct thread *current_thread = thread_current ();
-  // 设置睡眠时间
-  current_thread->ticks_blocked = ticks;
-  pushin_blocked_list();
-  thread_block ();
-  intr_set_level (old_level);
+  while (timer_elapsed (start) < ticks) 
+    thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -177,18 +172,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  blocked_thread_foreach (blocked_thread_check, NULL);//szl
-  //thread_foreach(thread_check,NULL);
-  if(thread_mlfqs){
-    increment_recent_cpu();
-    if(ticks % TIMER_FREQ==0){
-      update_load_avg();  //exactly
-      thread_foreach(update_cpu,NULL);
-    }
-    if(ticks%4==0){
-      thread_foreach(update_priority,NULL);
-    }
-  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

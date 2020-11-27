@@ -26,7 +26,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char *file_name) 
+process_execute (const char * file_name) 
 {
   char *fn_copy;
   tid_t tid;
@@ -37,19 +37,34 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-
+  char *token, *save_ptr;
+  token = strtok_r(file_name," ",&save_ptr);
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
+  tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  if (tid == TID_ERROR){
     palloc_free_page (fn_copy); 
-  return tid;
+    return tid;
+  }
+  /* 创建成功 */
+#ifdef USERPROG
+  enum intr_level old_level = intr_disable ();
+  struct thread *parent = thread_current();
+  struct thread *child = get_thread_by_tid(tid);
+  child->pp_tid = parent->tid;                  /* 创建进程的父进程就是当前进程 */
+  list_push_back(&parent->cp_list, &child->cpelem);    /* 更新当前进程的cp_list */
+  intr_set_level (old_level);            
+#endif
+
+  return tid; 
 }
+
 
 /* A thread function that loads a user process and starts it
    running. */
 static void
 start_process (void *file_name_)
 {
+  printf("%s startprocess\n",file_name_);
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
@@ -59,12 +74,45 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
 
-  /* If load failed, quit. */
-  palloc_free_page (file_name);
+  char *token , *save_ptr;
+  token = strtok_r(file_name," ",&save_ptr);
+
+  /* 加载用户进程的eip和esp eip:执行指令地址 esp:栈顶地址 */
+  success = load (token, &if_.eip, &if_.esp);
+  printf("success: %d\n",success);
+    /* If load failed, quit. */
   if (!success) 
     thread_exit ();
+
+  /* 参数传递 */
+  char *esp =(char *)if_.esp; // 维护栈顶
+  char *argv[256]; // 存储的参数地址
+  int argc = 0, tokenlen = 0; // argc:参数数量 tokenlen:token长度
+  for( ; token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
+    printf("get token:%s\n",token);
+    tokenlen = strlen(token)+1; //'(token)\0'
+    esp -= tokenlen; // decrements the stack pointer
+    strlcpy(esp, token , tokenlen+1); // right-to-left order
+    argv[argc++] = esp; 
+  }
+  while((int)esp % 4!=0){ // word-align
+    esp--;
+  }
+  int *tmp = esp-4; // 接下来存argv地址
+  *tmp--= 0; // argv[argc+1] 
+  int i;
+  for(i=argc-1;i>=0;i--){
+    *tmp-- = (int *)argv[i];
+  }
+  *tmp-- = tmp+1; // argv
+  *tmp-- = argc; // argc;
+  *tmp = 0; // return address
+  if_.esp = tmp;// 栈更新 
+  
+
+  palloc_free_page (file_name);
+
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -75,6 +123,7 @@ start_process (void *file_name_)
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
 }
+
 
 /* Waits for thread TID to die and returns its exit status.  If
    it was terminated by the kernel (i.e. killed due to an
@@ -88,7 +137,11 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  return -1;
+  if(child_tid == TID_ERROR)return -1;            /* TID invalid */
+  struct thread* child = get_child_by_tid(child_tid);
+  if(child == NULL)return -1;
+  list_remove(&child->cpelem);
+  return child->ret;
 }
 
 /* Free the current process's resources. */
@@ -110,6 +163,7 @@ process_exit (void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
+      printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
@@ -437,7 +491,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE-12;
+        *esp = PHYS_BASE - 12;
       else
         palloc_free_page (kpage);
     }
