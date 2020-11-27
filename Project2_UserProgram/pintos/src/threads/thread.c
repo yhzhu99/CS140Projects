@@ -72,27 +72,40 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 struct thread*
-get_thread_by_tid(tid_t tid){
+get_thread_by_tid(tid_t tid)
+{
+  enum intr_level old_level;
+  old_level = intr_disable();
   struct list_elem* e;
   for (e = list_begin (&all_list); e != list_end (&all_list);
        e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, allelem);
-      if(t->tid == tid)return t;
+      if(t->tid == tid){
+        intr_set_level(old_level);
+        return t;
+      }
     }
+  intr_set_level(old_level);
   return NULL;
 }
 
 struct thread*
-get_child_by_tid(tid_t tid){
+get_child_by_tid(struct list* list, tid_t tid)
+{
+  enum intr_level old_level;
+  old_level = intr_disable();
   struct list_elem* e;
-  struct thread* cur = thread_current();
-  for (e = list_begin (&cur->cp_list); e != list_end (&cur->cp_list);
-       e = list_next (e))
+  for (e = list_begin (list); e != list_end (list);
+      e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, cpelem);
-      if(t->tid == tid)return t;
+      if(t->tid == tid){
+        intr_set_level(old_level);
+        return t;
+      }
     }
+  intr_set_level(old_level);
   return NULL;
 }
 /* Initializes the threading system by transforming the code
@@ -306,7 +319,7 @@ void
 thread_exit (void) 
 {
   ASSERT (!intr_context ());
-
+  list_remove (&thread_current()->cpelem);
 #ifdef USERPROG
   process_exit ();
 #endif
@@ -490,9 +503,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
 #ifdef USERPROG
-  t-> ret = 0;                            /* 初始化返回值 */
-  t-> pp_tid = 0;                         /* 初始化父进程tid */
-  list_init(&t->cp_list);                  /* 初始化子进程列表 */
+
+  list_init(&t->child_list);              /* 初始化子进程列表 */
+
 #endif
 
 

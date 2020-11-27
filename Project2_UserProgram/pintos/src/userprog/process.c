@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -26,8 +27,9 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char * file_name) 
+process_execute (const char *file_name) 
 {
+  //printf("%s process_execute\n",file_name);
   char *fn_copy;
   tid_t tid;
 
@@ -38,23 +40,24 @@ process_execute (const char * file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
   char *token, *save_ptr;
-  token = strtok_r(file_name," ",&save_ptr);
+  token = strtok_r((char*)file_name," ",&save_ptr);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  //printf("%s thread_created\n",token);
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy); 
     return tid;
   }
   /* 创建成功 */
+  //printf("thread_created success\n");
 #ifdef USERPROG
   enum intr_level old_level = intr_disable ();
-  struct thread *parent = thread_current();
-  struct thread *child = get_thread_by_tid(tid);
-  child->pp_tid = parent->tid;                  /* 创建进程的父进程就是当前进程 */
-  list_push_back(&parent->cp_list, &child->cpelem);    /* 更新当前进程的cp_list */
+  struct thread *parent = thread_current();          /* 当前进程就是父进程 */
+  struct thread *child = get_thread_by_tid(tid);     /* 根据tid找到子进程 */
+  child->parent_tid = parent->tid;                   /* 更新parent_id */
+  list_push_back(&parent->child_list,&child->cpelem);/* push */
   intr_set_level (old_level);            
 #endif
-
   return tid; 
 }
 
@@ -64,8 +67,8 @@ process_execute (const char * file_name)
 static void
 start_process (void *file_name_)
 {
-  printf("%s startprocess\n",file_name_);
   char *file_name = file_name_;
+  //printf("%s start\n",file_name_);
   struct intr_frame if_;
   bool success;
 
@@ -80,17 +83,19 @@ start_process (void *file_name_)
 
   /* 加载用户进程的eip和esp eip:执行指令地址 esp:栈顶地址 */
   success = load (token, &if_.eip, &if_.esp);
-  printf("success: %d\n",success);
+
+  //printf("loaded %d\n",success);
     /* If load failed, quit. */
   if (!success) 
     thread_exit ();
 
+  //printf("start arg passing\n");
   /* 参数传递 */
   char *esp =(char *)if_.esp; // 维护栈顶
   char *argv[256]; // 存储的参数地址
   int argc = 0, tokenlen = 0; // argc:参数数量 tokenlen:token长度
   for( ; token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
-    printf("get token:%s\n",token);
+    //printf("token: %s\n",token);
     tokenlen = strlen(token)+1; //'(token)\0'
     esp -= tokenlen; // decrements the stack pointer
     strlcpy(esp, token , tokenlen+1); // right-to-left order
@@ -103,10 +108,10 @@ start_process (void *file_name_)
   *tmp--= 0; // argv[argc+1] 
   int i;
   for(i=argc-1;i>=0;i--){
-    *tmp-- = (int *)argv[i];
+    *tmp--= (int *)argv[i];
   }
-  *tmp-- = tmp+1; // argv
-  *tmp-- = argc; // argc;
+  *tmp--= tmp+1; // argv
+  *tmp--= argc; // argc;
   *tmp = 0; // return address
   if_.esp = tmp;// 栈更新 
   
@@ -137,11 +142,18 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  //printf("process_wait %d\n",child_tid);
   if(child_tid == TID_ERROR)return -1;            /* TID invalid */
-  struct thread* child = get_child_by_tid(child_tid);
-  if(child == NULL)return -1;
-  list_remove(&child->cpelem);
-  return child->ret;
+  struct thread* child = get_child_by_tid(&thread_current()->child_list,child_tid);
+  if(child==NULL)return -1; /* not child_tid */
+  int ret = child->ret;
+  //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
+  while(child!=NULL){
+    //printf("%d yield\n",thread_current()->tid);
+    thread_yield();
+    child = get_child_by_tid(&thread_current()->child_list,child_tid);
+  }
+  return ret;
 }
 
 /* Free the current process's resources. */
@@ -150,9 +162,16 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+  printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
 
+  // if(cur->tid==1)return;                          /* kernel进程，不释放资源 */
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+
+  // 释放当前进程文件资源
+  // 释放子进程所有资源
+
+  
   pd = cur->pagedir;
   if (pd != NULL) 
     {
@@ -163,7 +182,6 @@ process_exit (void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
-      printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
@@ -262,6 +280,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
+  //printf("%s start loading\n",file_name);
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
@@ -271,10 +290,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
+  //printf("pagedir created\n");
   if (t->pagedir == NULL) 
     goto done;
-  process_activate ();
 
+  process_activate ();
+  //printf("filesys_open\n");
   /* Open executable file. */
   file = filesys_open (file_name);
   if (file == NULL) 
@@ -282,7 +303,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-
+  //printf("file_read\n");
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -295,7 +316,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: error loading executable\n", file_name);
       goto done; 
     }
-
+  //printf("read program headers\n");
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
   for (i = 0; i < ehdr.e_phnum; i++) 
@@ -354,14 +375,14 @@ load (const char *file_name, void (**eip) (void), void **esp)
           break;
         }
     }
-
+  //printf("setup_stack\n");
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
 
+  //printf("start address");
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
-
   success = true;
 
  done:

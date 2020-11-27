@@ -4,7 +4,6 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -97,9 +96,10 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     int ret;                            /* exit status */  
-    struct list cp_list;                /* 子进程list */
-    struct list_elem cpelem;             /* List element for cp_list */
-    tid_t pp_tid;                       /* 父进程tid */
+    struct list child_list;             /* 子进程列表 */
+    struct list_elem cpelem;            /* elem for child_list */
+    tid_t parent_tid;                   /* 父进程的tid */
+
 
 
 #endif
@@ -145,5 +145,5 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 struct thread* get_thread_by_tid(tid_t tid);
-struct thread* get_child_by_tid(tid_t tid);
+struct thread* get_child_by_tid(struct list *,tid_t);
 #endif /* threads/thread.h */
