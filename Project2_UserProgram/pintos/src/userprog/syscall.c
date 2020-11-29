@@ -16,7 +16,7 @@
 static void syscall_handler (struct intr_frame *);
 void halt(void);
 void exit(struct intr_frame *);
-int exec(const char *cmd_line);
+int exec(struct intr_frame *);
 
 void
 syscall_init (void) 
