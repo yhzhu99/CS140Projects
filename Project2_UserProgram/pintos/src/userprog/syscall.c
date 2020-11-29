@@ -31,27 +31,51 @@ syscall_handler (struct intr_frame *f UNUSED)
   switch (*p)
   {
   case SYS_HALT:
-    //printf("SYS_HALT\n");
+    printf("SYS_HALT\n");
     //halt();
     break;
   case SYS_EXIT:
-    //printf("SYS_EXIT\n");
+    printf("SYS_EXIT\n");
     //exit(*(p+1));
     break;
   case SYS_EXEC:
-    //printf("SYS_EXEC\n");
+    printf("SYS_EXEC\n");
     //exec(*(p+1));
     break;
   case SYS_WAIT:
-    //printf("SYS_WAIT!\n");
+    printf("SYS_WAIT!\n");
     break;
   case SYS_CREATE:
-    //printf("SYS_WAIT!\n");
+    printf("SYS_WAIT!\n");
+    break;
+  case SYS_REMOVE:
+    printf("SYS_REMOVE!\n");
+    break;
+  case SYS_OPEN:
+    printf("SYS_OPEN!\n");
+    break;
+  case SYS_FILESIZE:
+    printf("SYS_FILESIZE!\n");
+    break;  
+  case SYS_READ:
+    printf("SYS_READ!\n");
+    break;
+  case SYS_WRITE:
+    printf("SYS_WRITE!\n");
+    break;
+  case SYS_SEEK:
+    printf("SYS_SEEK!\n");
+    break;
+  case SYS_TELL:
+    printf("SYS_TELL!\n");
+    break;
+  case SYS_CLOSE:
+    printf("SYS_CLOSE!\n");
     break;
   default:
     break;
   }
-  printf ("system call!\n");
+  //printf ("system call!\n");
   thread_exit ();
 }
 
