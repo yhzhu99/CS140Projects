@@ -16,7 +16,8 @@
 static void syscall_handler (struct intr_frame *);
 void halt(void);
 void exit(struct intr_frame *);
-int exec(struct intr_frame *);
+pid_t exec(struct intr_frame *);
+int wait(struct intr_frame *);
 
 void
 syscall_init (void) 
@@ -40,7 +41,7 @@ syscall_handler (struct intr_frame *f)
     exec(f);
     break;
   case SYS_WAIT:
-    printf("SYS_WAIT!\n");
+    wait(f);
     break;
   case SYS_CREATE:
     printf("SYS_WAIT!\n");
@@ -92,9 +93,16 @@ exit(struct intr_frame *f)
   thread_exit();
 }
 
-int
+pid_t
 exec(struct intr_frame* f)
 {
   char *cmd_line = (char*)(f->esp+4);
   return process_execute(cmd_line);
+}
+
+int 
+wait(struct intr_frame *f)
+{
+  pid_t pid = *(int*)(f->esp+4);
+  return process_wait(pid);
 }
