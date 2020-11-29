@@ -15,7 +15,7 @@
 
 static void syscall_handler (struct intr_frame *);
 void halt(void);
-void exit(int status);
+void exit(struct intr_frame *);
 int exec(const char *cmd_line);
 
 void
@@ -25,7 +25,7 @@ syscall_init (void)
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler (struct intr_frame *f) 
 {
   int *p = f->esp;
   switch (*p)
@@ -35,7 +35,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
   case SYS_EXIT:
     printf("SYS_EXIT\n");
-    //exit(*(p+1));
+    exit(f);
     break;
   case SYS_EXEC:
     printf("SYS_EXEC\n");
@@ -86,8 +86,10 @@ halt(void)
 }
 
 void
-exit(int status)
+exit(struct intr_frame *f)
 {
+  int status = *((int*)(f->esp)+1);
+  //todo: close all files
   thread_current()->ret = status;
   thread_exit();
 }
