@@ -72,6 +72,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     printf("SYS_CLOSE!\n");
     break;
   default:
+    exit(-1);
     break;
   }
   //printf ("system call!\n");
