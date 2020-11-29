@@ -34,12 +34,10 @@ syscall_handler (struct intr_frame *f)
     halt();
     break;
   case SYS_EXIT:
-    printf("SYS_EXIT\n");
     exit(f);
     break;
   case SYS_EXEC:
-    printf("SYS_EXEC\n");
-    //exec(*(p+1));
+    exec(f);
     break;
   case SYS_WAIT:
     printf("SYS_WAIT!\n");
@@ -95,7 +93,8 @@ exit(struct intr_frame *f)
 }
 
 int
-exec(const char *cmd_line)
+exec(struct intr_frame* f)
 {
+  char *cmd_line = (char*)(f->esp+4);
   return process_execute(cmd_line);
 }
