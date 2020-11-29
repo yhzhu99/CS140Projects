@@ -18,6 +18,9 @@ void halt(void);
 void exit(struct intr_frame *);
 pid_t exec(struct intr_frame *);
 int wait(struct intr_frame *);
+bool create(struct intr_frame *);
+
+
 
 void
 syscall_init (void) 
@@ -44,7 +47,7 @@ syscall_handler (struct intr_frame *f)
     wait(f);
     break;
   case SYS_CREATE:
-    printf("SYS_WAIT!\n");
+    create(f);
     break;
   case SYS_REMOVE:
     printf("SYS_REMOVE!\n");
