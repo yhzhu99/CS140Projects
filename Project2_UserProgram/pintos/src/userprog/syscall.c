@@ -478,6 +478,8 @@ close(int num)
   {
     exit(-1);
   }
+  list_remove(&fd->elem);
+  list_remove(&fd->allelem);
   file_close(fd->file);
-  file_allow_write(fd->num);
+  free(fd);
 }
