@@ -13,6 +13,7 @@
 #include "userprog/process.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "devices/input.h"
 #include <string.h>
 
 static void syscall_handler (struct intr_frame *);
@@ -25,6 +26,7 @@ void syscall_create(struct intr_frame *);
 void syscall_remove(struct intr_frame *);
 void syscall_open(struct intr_frame *);
 void syscall_filesize(struct intr_frame *);
+void syscall_read(struct intr_frame *);
 
 void halt(void);
 void exit(int);
@@ -34,6 +36,7 @@ bool create(const char*,unsigned);
 bool remove(const char*);
 int open(const char*);
 int filesize(int fd);
+int read(int,void *,unsigned);
 
 struct fd* find_fd_by_num(int num);
 
@@ -88,7 +91,7 @@ syscall_handler (struct intr_frame *f)
     syscall_filesize(f);
     break;  
   case SYS_READ:
-    printf("SYS_READ!\n");
+    syscall_read(f);
     break;
   case SYS_WRITE:
     printf("SYS_WRITE!\n");
@@ -125,7 +128,7 @@ halt(void)
 void 
 syscall_exit(struct intr_frame *f)
 {
-  int status = *((int*)(f->esp)+1);
+  int status = *(int*)(f->esp+4);
   exit(status);
 }
 
@@ -140,7 +143,7 @@ exit(int status)
 void 
 syscall_exec(struct intr_frame *f)
 {
-  char *cmd_line = (char*)(f->esp+4);
+  char *cmd_line = *(char**)(f->esp+4);
   exec(cmd_line);
 }
 
@@ -167,7 +170,7 @@ wait(pid_t pid)
 void 
 syscall_create(struct intr_frame *f)
 {
-  char *file = (char*)(f->esp+4);
+  char *file = *(char**)(f->esp+4);
   unsigned initial_size = *(int *)(f->esp+8);
   create(file,initial_size);
 }
@@ -181,7 +184,7 @@ create(const char*file , unsigned initial_size)
 void
 syscall_remove(struct intr_frame *f)
 {
-  char *file = (char*)(f->esp+4);
+  char *file = *(char**)(f->esp+4);
   remove(file);
 }
 
@@ -194,7 +197,7 @@ remove(const char* file)
 void 
 syscall_open(struct intr_frame *f)
 {
-  char *file = (char*)(f->esp+4);
+  char *file = *(char**)(f->esp+4);
   open(file);
 }
 
@@ -215,7 +218,7 @@ open(const char* file)
 void
 syscall_filesize(struct intr_frame *f)
 {
-  int fd = (int*)(f->esp+4);
+  int fd = *(int*)(f->esp+4);
   filesize(fd);
 }
 
@@ -228,4 +231,29 @@ filesize(int num)
     exit(-1);
   }
   return file_length(fd->file);
+}
+
+void 
+syscall_read(struct intr_frame *f)
+{
+  int fd = *(int*)(f->esp+4);
+  void *buffer = *(char**)(f->esp+8);
+  unsigned size = *(unsigned*)(f->esp+12);
+  read(fd,buffer,size);
+}
+
+int 
+read(int num,void *buffer,unsigned size)
+{
+  /* Fd 0 reads from the keyboard using input_getc(). */
+  if(num == 0)
+  {
+    int i;
+    for(i=0;i<size;i++){
+      (*((char**)buffer))[i] = input_getc();
+    }
+    return size;
+  }
+  struct fd* fd = find_fd_by_num(num);
+  return file_read(fd->file,buffer,size);
 }
