@@ -99,7 +99,7 @@ struct thread
     struct list child_list;             /* 子进程列表 */
     struct list_elem cpelem;            /* elem for child_list */
     tid_t parent_tid;                   /* 父进程的tid */
-
+    struct list fd_list;                /* 拥有的file descriptor */
 
 
 #endif

@@ -505,7 +505,8 @@ init_thread (struct thread *t, const char *name, int priority)
 #ifdef USERPROG
 
   list_init(&t->child_list);              /* 初始化子进程列表 */
-
+  list_init(&t->fd_list);                 /* 初始化拥有的file descriptor */
+  
 #endif
 
 

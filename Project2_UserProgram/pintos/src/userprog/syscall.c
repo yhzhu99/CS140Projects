@@ -22,7 +22,7 @@ void syscall_exec(struct intr_frame *);
 void syscall_wait(struct intr_frame *);
 void syscall_create(struct intr_frame *);
 void syscall_remove(struct intr_frame *);
-
+void syscall_open(struct intr_frame *);
 
 void halt(void);
 void exit(int);
@@ -30,12 +30,13 @@ pid_t exec(const char*);
 int wait(pid_t pid);
 bool create(const char*,unsigned);
 bool remove(const char*);
-
+int open(const char*);
 
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  list_init(&file_list);
 }
 
 static void
@@ -63,7 +64,7 @@ syscall_handler (struct intr_frame *f)
     syscall_remove(f);
     break;
   case SYS_OPEN:
-    printf("SYS_OPEN!\n");
+    syscall_open(f);
     break;
   case SYS_FILESIZE:
     printf("SYS_FILESIZE!\n");
@@ -170,4 +171,25 @@ bool
 remove(const char* file)
 {
   return filesys_remove(file);
+}
+
+void 
+syscall_open(struct intr_frame *f)
+{
+  char *file = (char*)(f->esp+4);
+  open(file);
+}
+
+int 
+open(const char* file)
+{
+  struct file *f = filesys_open(file);
+  if(f==NULL)return -1;                                /* open failed */
+  struct fd *fd = malloc(sizeof(struct fd));
+  fd->file = f;                                        
+  fd->num = 2;                                         /* File descriptors numbered 0 and 1 are reserved for the console */
+  struct thread *cur = thread_current();
+  list_push_back(&file_list,fd->allelem);
+  list_push_back(&cur->fd_list,fd->elem);
+  return fd->num;
 }
