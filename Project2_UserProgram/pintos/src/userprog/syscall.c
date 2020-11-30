@@ -4,6 +4,16 @@
   In part 2 of this project you will add code to do everything else 
   needed by system calls. */
 
+/* limitaions:
+- Concurrent accesses will interfere with one another. You should use synchronization to ensure that only one process at a time is executing file system code.
+- The number of files that may be created is also limited.
+- File data is allocated as a single extent, that is, data in a single file must occupy a contiguous range of sectors on disk. External fragmentation can therefore become a serious problem as a file system is used over time.
+- No subdirectories.
+- File names are limited to 14 characters.
+- There is no file system repair tool anyway.
+- If a file is open when it is removed, its blocks are not deallocated and it may still be accessed by any threads that have it open, until the last one closes it. 
+*/
+
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
@@ -14,6 +24,8 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/input.h"
+#include "threads/vaddr.h"
+#include "pagedir.h"
 #include <string.h>
 
 static void syscall_handler (struct intr_frame *);
@@ -46,7 +58,8 @@ void seek(int,unsigned);
 unsigned tell(int);
 void close(int);
 
-struct fd* find_fd_by_num(int num);
+struct fd* find_fd_by_num(int);
+bool pointer_valid(struct intr_frame *,int);
 
 /* file descriptor */
 struct fd{
@@ -69,6 +82,21 @@ find_fd_by_num(int num)
   return NULL;
 }
 
+bool
+pointer_valid(struct intr_frame *f,int num)
+{
+  int i;
+  uint32_t esp = f->esp;
+  struct thread *cur = thread_current();
+  for(i=1;i<=num;i++)
+  {
+    if(!is_user_vaddr(esp) || pagedir_get_page(cur->pagedir,esp) == NULL)
+    {
+      return false;
+    }
+  }
+  return true;
+}
 
 void
 syscall_init (void) 
@@ -145,6 +173,10 @@ halt(void)
 void 
 syscall_exit(struct intr_frame *f)
 {
+  if(!pointer_valid(f,1))
+  {
+    exit(-1);
+  }
   int status = *(int*)(f->esp+4);
   exit(status);
 }
@@ -160,6 +192,10 @@ exit(int status)
 void 
 syscall_exec(struct intr_frame *f)
 {
+  if(!pointer_valid(f,1))
+  {
+    exit(-1);
+  }
   char *cmd_line = *(char**)(f->esp+4);
   f->eax = exec(cmd_line);
 }
@@ -174,6 +210,10 @@ exec(const char* cmd_line)
 void 
 syscall_wait(struct intr_frame *f)
 {
+   if(!pointer_valid(f,1))
+  {
+    exit(-1);
+  }
   pid_t pid = *(int*)(f->esp+4);
   f->eax = wait(pid);
 }
@@ -187,6 +227,10 @@ wait(pid_t pid)
 void 
 syscall_create(struct intr_frame *f)
 {
+   if(!pointer_valid(f,2))
+  {
+    exit(-1);
+  }
   char *file = *(char**)(f->esp+4);
   unsigned initial_size = *(int *)(f->esp+8);
   f->eax = create(file,initial_size);
@@ -201,6 +245,10 @@ create(const char*file , unsigned initial_size)
 void
 syscall_remove(struct intr_frame *f)
 {
+   if(!pointer_valid(f,1))
+  {
+    exit(-1);
+  }
   char *file = *(char**)(f->esp+4);
   f->eax = remove(file);
 }
@@ -214,6 +262,10 @@ remove(const char* file)
 void 
 syscall_open(struct intr_frame *f)
 {
+   if(!pointer_valid(f,1))
+  {
+    exit(-1);
+  }
   char *file = *(char**)(f->esp+4);
   f->eax = open(file);
 }
@@ -236,6 +288,10 @@ open(const char* file)
 void
 syscall_filesize(struct intr_frame *f)
 {
+   if(!pointer_valid(f,1))
+  {
+    exit(-1);
+  }
   int fd = *(int*)(f->esp+4);
   f->eax = filesize(fd);
 }
@@ -254,6 +310,10 @@ filesize(int num)
 void 
 syscall_read(struct intr_frame *f)
 {
+   if(!pointer_valid(f,3))
+  {
+    exit(-1);
+  }
   int fd = *(int*)(f->esp+4);
   void *buffer = *(char**)(f->esp+8);
   unsigned size = *(unsigned*)(f->esp+12);
@@ -279,6 +339,10 @@ read(int num,void *buffer,unsigned size)
 void 
 syscall_write(struct intr_frame *f)
 {
+   if(!pointer_valid(f,3))
+  {
+    exit(-1);
+  }
   int fd = *(int*)(f->esp+4);
   void *buffer = *(char**)(f->esp+8);
   unsigned size = *(unsigned*)(f->esp+12);
@@ -302,6 +366,10 @@ write(int num,const void* buffer,unsigned size)
 void
 syscall_seek(struct intr_frame *f)
 {
+   if(!pointer_valid(f,2))
+  {
+    exit(-1);
+  }
   int fd = *(int*)(f->esp+4);
   unsigned position = *(unsigned*)(f->esp+8);
   seek(fd,position);
@@ -317,6 +385,10 @@ seek(int num, unsigned position)
 void
 syscall_tell(struct intr_frame *f)
 {
+   if(!pointer_valid(f,1))
+  {
+    exit(-1);
+  }
   int td = *(int*)(f->esp+4);
   f->eax = tell(td);
 }
@@ -331,6 +403,10 @@ tell(int num)
 void
 syscall_close(struct intr_frame *f)
 {
+   if(!pointer_valid(f,1))
+  {
+    exit(-1);
+  }
   int fd = *(int*)(f->esp+4);
   close(fd);
 }
