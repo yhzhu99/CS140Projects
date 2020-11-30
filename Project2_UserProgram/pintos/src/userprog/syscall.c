@@ -87,9 +87,9 @@ pointer_valid(uint32_t esp,int num)
 {
   int i;
   struct thread *cur = thread_current();
-  for(i=0;i<num;i++)
+  for(i=0;i<num*4;i++)
   {
-    if(!is_user_vaddr(esp) || pagedir_get_page(cur->pagedir,esp) == NULL)
+    if(!is_user_vaddr(esp+i) || pagedir_get_page(cur->pagedir,esp+i) == NULL)
     {
       return false;
     }
