@@ -30,6 +30,7 @@ void syscall_read(struct intr_frame *);
 void syscall_write(struct intr_frame *);
 void syscall_seek(struct intr_frame *);
 void syscall_tell(struct intr_frame *);
+void syscall_close(struct intr_frame *);
 
 void halt(void);
 void exit(int);
@@ -43,6 +44,7 @@ int read(int,void *,unsigned);
 int write(int,const void *,unsigned);
 void seek(int,unsigned);
 unsigned tell(int);
+void close(int);
 
 struct fd* find_fd_by_num(int num);
 
@@ -118,7 +120,7 @@ syscall_handler (struct intr_frame *f)
     syscall_tell(f);
     break;
   case SYS_CLOSE:
-    printf("SYS_CLOSE!\n");
+    syscall_close(f);
     break;
   default:
     exit(-1);
@@ -323,4 +325,18 @@ tell(int num)
 {
   struct fd *fd = find_fd_by_num(num);
   return file_tell(fd->file);
+}
+
+void
+syscall_close(struct intr_frame *f)
+{
+  int fd = *(int*)(f->esp+4);
+  close(fd);
+}
+
+void
+close(int num)
+{
+  struct fd *fd = find_fd_by_num(num);
+  file_close(fd->file);
 }
