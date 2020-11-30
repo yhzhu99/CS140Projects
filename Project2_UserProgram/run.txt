@@ -1,1 +1,2 @@
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/args-single -a args-single -- -q  -f run 'args-single onearg'
+pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/sc-bad-sp -a sc-bad-sp -- -q  -f run sc-bad-sp
