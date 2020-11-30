@@ -2,3 +2,4 @@ pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/args-single -a args-
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/sc-bad-sp -a sc-bad-sp -- -q  -f run sc-bad-sp
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/create-null -a create-null -- -q  -f run create-null
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/create-bad-ptr -a create-bad-ptr -- -q  -f run create-bad-ptr
+pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/read-normal -a read-normal -p ../../tests/userprog/sample.txt -a sample.txt -- -q  -f run read-normal

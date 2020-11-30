@@ -25,6 +25,7 @@
 #include "filesys/file.h"
 #include "devices/input.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
 #include "pagedir.h"
 #include <string.h>
 
@@ -59,7 +60,7 @@ unsigned tell(int);
 void close(int);
 
 struct fd* find_fd_by_num(int);
-bool pointer_valid(uint32_t,int);
+bool pointer_valid(void *,int);
 
 /* file descriptor */
 struct fd{
@@ -70,6 +71,7 @@ struct fd{
 };
 struct list file_list;
 int fd_num = 2;
+struct lock file_lock;
 
 struct fd*
 find_fd_by_num(int num)
@@ -84,7 +86,7 @@ find_fd_by_num(int num)
 }
 
 bool
-pointer_valid(uint32_t esp,int num)
+pointer_valid(void* esp,int num)
 {
   int i;
   struct thread *cur = thread_current();
@@ -113,6 +115,7 @@ syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
   list_init(&file_list);
+  lock_init(&file_lock);
 }
 
 static void
@@ -219,7 +222,9 @@ syscall_exec(struct intr_frame *f)
   {
     exit(-1);
   }
+  lock_acquire(&file_lock);
   f->eax = exec(cmd_line);
+  lock_release(&file_lock);
 }
 
 
@@ -301,7 +306,9 @@ syscall_open(struct intr_frame *f)
   {
     exit(-1);
   }
+  lock_acquire(&file_lock);
   f->eax = open(file);
+  lock_release(&file_lock);
 }
 
 int 
@@ -316,7 +323,7 @@ open(const char* file)
   struct thread *cur = thread_current();
   list_push_back(&file_list,&fd->allelem);
   list_push_back(&cur->fd_list,&fd->elem);
-  file_deny_write(f);
+  //printf("%s file size:%d\n",file,filesize(fd->num));
   return fd->num;
 }
 
@@ -345,7 +352,7 @@ filesize(int num)
 void 
 syscall_read(struct intr_frame *f)
 {
-   if(!pointer_valid(f->esp+4,3))
+  if(!pointer_valid(f->esp+4,3))
   {
     exit(-1);
   }
@@ -356,7 +363,9 @@ syscall_read(struct intr_frame *f)
   {
     exit(-1);
   }
+  lock_acquire(&file_lock);
   f->eax = read(fd,buffer,size);
+  lock_release(&file_lock);
 }
 
 int 
@@ -374,8 +383,9 @@ read(int num,void *buffer,unsigned size)
   struct fd* fd = find_fd_by_num(num);
   if(fd == NULL)
   {
-    exit(-1);
+    return -1;                                          /* -1 if the file could not be read (due to a condition other than end of file) */
   }
+  //printf("read %d %p %d\n",num,buffer,size);
   return file_read(fd->file,buffer,size);
 }
 
@@ -393,7 +403,9 @@ syscall_write(struct intr_frame *f)
   {
     exit(-1);
   }
+  lock_acquire(&file_lock);
   f->eax = write(fd,buffer,size);
+  lock_release(&file_lock);
 }
 
 int 
