@@ -11,14 +11,24 @@
 #include "threads/thread.h"
 #include "devices/shutdown.h"
 #include "userprog/process.h"
+#include "filesys/filesys.h"
 #include <string.h>
 
 static void syscall_handler (struct intr_frame *);
+
+void syscall_halt(struct intr_frame *);
+void syscall_exit(struct intr_frame *);
+void syscall_exec(struct intr_frame *);
+void syscall_wait(struct intr_frame *);
+void syscall_create(struct intr_frame *);
+
+
+
 void halt(void);
-void exit(struct intr_frame *);
-pid_t exec(struct intr_frame *);
-int wait(struct intr_frame *);
-bool create(struct intr_frame *);
+void exit(int);
+pid_t exec(const char*);
+int wait(pid_t pid);
+bool create(const char*,unsigned);
 
 
 
@@ -35,19 +45,19 @@ syscall_handler (struct intr_frame *f)
   switch (*p)
   {
   case SYS_HALT:
-    halt();
+    syscall_halt(f);
     break;
   case SYS_EXIT:
-    exit(f);
+    syscall_exit(f);
     break;
   case SYS_EXEC:
-    exec(f);
+    syscall_exec(f);
     break;
   case SYS_WAIT:
-    wait(f);
+    syscall_wait(f);
     break;
   case SYS_CREATE:
-    create(f);
+    syscall_create(f);
     break;
   case SYS_REMOVE:
     printf("SYS_REMOVE!\n");
@@ -82,30 +92,69 @@ syscall_handler (struct intr_frame *f)
 }
 
 void 
+syscall_halt(struct intr_frame *f)
+{
+  halt();
+}
+
+void 
 halt(void)
 {
   shutdown_power_off();
 }
 
-void
-exit(struct intr_frame *f)
+void 
+syscall_exit(struct intr_frame *f)
 {
   int status = *((int*)(f->esp)+1);
+  exit(status);
+}
+
+void
+exit(int status)
+{
   //todo: close all files
   thread_current()->ret = status;
   thread_exit();
 }
 
-pid_t
-exec(struct intr_frame* f)
+void 
+syscall_exec(struct intr_frame *f)
 {
   char *cmd_line = (char*)(f->esp+4);
+  exec(cmd_line);
+}
+
+
+pid_t
+exec(const char* cmd_line)
+{
   return process_execute(cmd_line);
 }
 
-int 
-wait(struct intr_frame *f)
+void 
+syscall_wait(struct intr_frame *f)
 {
   pid_t pid = *(int*)(f->esp+4);
+  wait(pid);
+}
+
+int 
+wait(pid_t pid)
+{
   return process_wait(pid);
+}
+
+void 
+syscall_create(struct intr_frame *f)
+{
+  char *file = (char*)(f->esp+4);
+  unsigned initial_size = *(int *)(f->esp+8);
+  create(file,initial_size);
+}
+
+bool 
+create(const char*file , unsigned initial_size)
+{
+  return filesys_create(file,initial_size);
 }
