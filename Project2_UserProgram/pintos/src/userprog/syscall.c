@@ -27,6 +27,7 @@ void syscall_remove(struct intr_frame *);
 void syscall_open(struct intr_frame *);
 void syscall_filesize(struct intr_frame *);
 void syscall_read(struct intr_frame *);
+void syscall_write(struct intr_frame *);
 
 void halt(void);
 void exit(int);
@@ -37,6 +38,7 @@ bool remove(const char*);
 int open(const char*);
 int filesize(int fd);
 int read(int,void *,unsigned);
+int write(int,const void *,unsigned);
 
 struct fd* find_fd_by_num(int num);
 
@@ -94,7 +96,7 @@ syscall_handler (struct intr_frame *f)
     syscall_read(f);
     break;
   case SYS_WRITE:
-    printf("SYS_WRITE!\n");
+    syscall_write(f);
     break;
   case SYS_SEEK:
     printf("SYS_SEEK!\n");
@@ -256,4 +258,27 @@ read(int num,void *buffer,unsigned size)
   }
   struct fd* fd = find_fd_by_num(num);
   return file_read(fd->file,buffer,size);
+}
+
+void 
+syscall_write(struct intr_frame *f)
+{
+  int fd = *(int*)(f->esp+4);
+  void *buffer = *(char**)(f->esp+8);
+  unsigned size = *(unsigned*)(f->esp+12);
+  write(fd,buffer,size);
+}
+
+int 
+write(int num,const void* buffer,unsigned size)
+{
+  /* Fd 1 writes to the console. Your code to write to the console should write all of buffer in one call to putbuf() */
+  if(num == 1)
+  {
+    int i;
+    putbuf(buffer,size);
+    return size;
+  }
+  struct fd* fd = find_fd_by_num(num);
+  return file_write(fd->file,buffer,size); 
 }
