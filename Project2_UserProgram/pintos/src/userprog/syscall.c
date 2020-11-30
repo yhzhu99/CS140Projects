@@ -69,6 +69,7 @@ struct fd{
     struct list_elem elem;
 };
 struct list file_list;
+int fd_num = 2;
 
 struct fd*
 find_fd_by_num(int num)
@@ -307,10 +308,11 @@ int
 open(const char* file)
 {
   struct file *f = filesys_open(file);
-  if(f==NULL)return -1;                                /* open failed */
+  if(f == NULL)return -1;                                /* open failed */
   struct fd *fd = malloc(sizeof(struct fd));
   fd->file = f;                                        
-  fd->num = 2;                                         /* File descriptors numbered 0 and 1 are reserved for the console */
+  fd->num = fd_num;                                         /* File descriptors numbered 0 and 1 are reserved for the console */
+  fd_num++;
   struct thread *cur = thread_current();
   list_push_back(&file_list,&fd->allelem);
   list_push_back(&cur->fd_list,&fd->elem);
