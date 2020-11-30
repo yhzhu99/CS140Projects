@@ -59,7 +59,7 @@ unsigned tell(int);
 void close(int);
 
 struct fd* find_fd_by_num(int);
-bool pointer_valid(struct intr_frame *,int);
+bool pointer_valid(uint32_t,int);
 
 /* file descriptor */
 struct fd{
@@ -83,12 +83,11 @@ find_fd_by_num(int num)
 }
 
 bool
-pointer_valid(struct intr_frame *f,int num)
+pointer_valid(uint32_t esp,int num)
 {
   int i;
-  uint32_t esp = f->esp;
   struct thread *cur = thread_current();
-  for(i=1;i<=num;i++)
+  for(i=0;i<num;i++)
   {
     if(!is_user_vaddr(esp) || pagedir_get_page(cur->pagedir,esp) == NULL)
     {
@@ -108,6 +107,10 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
+  if(!pointer_valid(f->esp,1))
+  {
+    exit(-1);
+  }
   int *p = f->esp;
   switch (*p)
   {
@@ -173,7 +176,7 @@ halt(void)
 void 
 syscall_exit(struct intr_frame *f)
 {
-  if(!pointer_valid(f,1))
+  if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
@@ -192,7 +195,7 @@ exit(int status)
 void 
 syscall_exec(struct intr_frame *f)
 {
-  if(!pointer_valid(f,1))
+  if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
@@ -210,7 +213,7 @@ exec(const char* cmd_line)
 void 
 syscall_wait(struct intr_frame *f)
 {
-   if(!pointer_valid(f,1))
+   if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
@@ -227,7 +230,7 @@ wait(pid_t pid)
 void 
 syscall_create(struct intr_frame *f)
 {
-   if(!pointer_valid(f,2))
+   if(!pointer_valid(f->esp+4,2))
   {
     exit(-1);
   }
@@ -245,7 +248,7 @@ create(const char*file , unsigned initial_size)
 void
 syscall_remove(struct intr_frame *f)
 {
-   if(!pointer_valid(f,1))
+   if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
@@ -262,7 +265,7 @@ remove(const char* file)
 void 
 syscall_open(struct intr_frame *f)
 {
-   if(!pointer_valid(f,1))
+   if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
@@ -288,7 +291,7 @@ open(const char* file)
 void
 syscall_filesize(struct intr_frame *f)
 {
-   if(!pointer_valid(f,1))
+   if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
@@ -310,7 +313,7 @@ filesize(int num)
 void 
 syscall_read(struct intr_frame *f)
 {
-   if(!pointer_valid(f,3))
+   if(!pointer_valid(f->esp+4,3))
   {
     exit(-1);
   }
@@ -339,7 +342,7 @@ read(int num,void *buffer,unsigned size)
 void 
 syscall_write(struct intr_frame *f)
 {
-   if(!pointer_valid(f,3))
+   if(!pointer_valid(f->esp+4,3))
   {
     exit(-1);
   }
@@ -366,7 +369,7 @@ write(int num,const void* buffer,unsigned size)
 void
 syscall_seek(struct intr_frame *f)
 {
-   if(!pointer_valid(f,2))
+   if(!pointer_valid(f->esp+4,2))
   {
     exit(-1);
   }
@@ -385,7 +388,7 @@ seek(int num, unsigned position)
 void
 syscall_tell(struct intr_frame *f)
 {
-   if(!pointer_valid(f,1))
+   if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
@@ -403,7 +406,7 @@ tell(int num)
 void
 syscall_close(struct intr_frame *f)
 {
-   if(!pointer_valid(f,1))
+   if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
