@@ -112,6 +112,10 @@ syscall_handler (struct intr_frame *f)
     exit(-1);
   }
   int *p = f->esp;
+  if(p == NULL)
+  {
+    exit(-1);
+  }
   switch (*p)
   {
   case SYS_HALT:
@@ -200,6 +204,10 @@ syscall_exec(struct intr_frame *f)
     exit(-1);
   }
   char *cmd_line = *(char**)(f->esp+4);
+  if(cmd_line == NULL)
+  {
+    exit(-1);
+  }
   f->eax = exec(cmd_line);
 }
 
@@ -230,11 +238,15 @@ wait(pid_t pid)
 void 
 syscall_create(struct intr_frame *f)
 {
-   if(!pointer_valid(f->esp+4,2))
+  if(!pointer_valid(f->esp+4,2))
   {
     exit(-1);
   }
   char *file = *(char**)(f->esp+4);
+  if(file == NULL)
+  {
+    exit(-1);
+  }
   unsigned initial_size = *(int *)(f->esp+8);
   f->eax = create(file,initial_size);
 }
@@ -253,6 +265,10 @@ syscall_remove(struct intr_frame *f)
     exit(-1);
   }
   char *file = *(char**)(f->esp+4);
+  if(file == NULL)
+  {
+    exit(-1);
+  }
   f->eax = remove(file);
 }
 
@@ -270,6 +286,10 @@ syscall_open(struct intr_frame *f)
     exit(-1);
   }
   char *file = *(char**)(f->esp+4);
+  if(file == NULL)
+  {
+    exit(-1);
+  }
   f->eax = open(file);
 }
 
@@ -320,6 +340,10 @@ syscall_read(struct intr_frame *f)
   int fd = *(int*)(f->esp+4);
   void *buffer = *(char**)(f->esp+8);
   unsigned size = *(unsigned*)(f->esp+12);
+  if(buffer == NULL)
+  {
+    exit(-1);
+  }
   f->eax = read(fd,buffer,size);
 }
 
@@ -349,6 +373,10 @@ syscall_write(struct intr_frame *f)
   int fd = *(int*)(f->esp+4);
   void *buffer = *(char**)(f->esp+8);
   unsigned size = *(unsigned*)(f->esp+12);
+  if(buffer == NULL)
+  {
+    exit(-1);
+  }
   f->eax = write(fd,buffer,size);
 }
 
