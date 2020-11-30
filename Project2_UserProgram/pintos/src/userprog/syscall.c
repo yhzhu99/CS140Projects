@@ -16,7 +16,7 @@
 
 static void syscall_handler (struct intr_frame *);
 
-void syscall_halt(struct intr_frame *);
+void syscall_halt(void);
 void syscall_exit(struct intr_frame *);
 void syscall_exec(struct intr_frame *);
 void syscall_wait(struct intr_frame *);
@@ -45,7 +45,7 @@ syscall_handler (struct intr_frame *f)
   switch (*p)
   {
   case SYS_HALT:
-    syscall_halt(f);
+    syscall_halt();
     break;
   case SYS_EXIT:
     syscall_exit(f);
@@ -92,7 +92,7 @@ syscall_handler (struct intr_frame *f)
 }
 
 void 
-syscall_halt(struct intr_frame *f)
+syscall_halt(void)
 {
   halt();
 }

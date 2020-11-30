@@ -101,13 +101,14 @@ start_process (void *file_name_)
     esp -= tokenlen; // decrements the stack pointer
     strlcpy(esp, token , tokenlen+1); // right-to-left order
     //printf("%p\t%s\n",esp,esp);
-    argv[argc++] = esp; 
+    argv[argc++] = (int)esp; 
   }
   while((int)esp % 4!=0){ // word-align
     esp--;
   }
   //printf("%p word-align\n",esp);
-  int *tmp = esp-4; // 接下来存argv地址
+  int *tmp = (int*)esp; // 接下来存argv地址
+  tmp--;
   *tmp = 0; // argv[argc+1]
   //printf("%p\t%p\n",tmp,*tmp);
   tmp--; 
@@ -117,7 +118,7 @@ start_process (void *file_name_)
     //printf("%p\t%p\n",tmp,*tmp);
     tmp--;
   }
-  *tmp = tmp+1; // argv
+  *tmp = (int)(tmp+1); // argv
   //printf("%p\t%p\n",tmp,*tmp);
   tmp--;
   *tmp = argc; // argc;
