@@ -42,6 +42,15 @@ int write(int,const void *,unsigned);
 
 struct fd* find_fd_by_num(int num);
 
+/* file descriptor */
+struct fd{
+    int num;
+    struct file *file;
+    struct list_elem allelem;
+    struct list_elem elem;
+};
+struct list file_list;
+
 struct fd*
 find_fd_by_num(int num)
 {
@@ -212,8 +221,8 @@ open(const char* file)
   fd->file = f;                                        
   fd->num = 2;                                         /* File descriptors numbered 0 and 1 are reserved for the console */
   struct thread *cur = thread_current();
-  list_push_back(&file_list,fd->allelem);
-  list_push_back(&cur->fd_list,fd->elem);
+  list_push_back(&file_list,&fd->allelem);
+  list_push_back(&cur->fd_list,&fd->elem);
   return fd->num;
 }
 
