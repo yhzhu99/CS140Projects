@@ -21,7 +21,7 @@ void syscall_exit(struct intr_frame *);
 void syscall_exec(struct intr_frame *);
 void syscall_wait(struct intr_frame *);
 void syscall_create(struct intr_frame *);
-
+void syscall_remove(struct intr_frame *);
 
 
 void halt(void);
@@ -29,7 +29,7 @@ void exit(int);
 pid_t exec(const char*);
 int wait(pid_t pid);
 bool create(const char*,unsigned);
-
+bool remove(const char*);
 
 
 void
@@ -60,7 +60,7 @@ syscall_handler (struct intr_frame *f)
     syscall_create(f);
     break;
   case SYS_REMOVE:
-    printf("SYS_REMOVE!\n");
+    syscall_remove(f);
     break;
   case SYS_OPEN:
     printf("SYS_OPEN!\n");
@@ -157,4 +157,17 @@ bool
 create(const char*file , unsigned initial_size)
 {
   return filesys_create(file,initial_size);
+}
+
+void
+syscall_remove(struct intr_frame *f)
+{
+  char *file = (char*)(f->esp+4);
+  remove(file);
+}
+
+bool 
+remove(const char* file)
+{
+  return filesys_remove(file);
 }
