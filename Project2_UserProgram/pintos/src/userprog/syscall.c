@@ -29,6 +29,7 @@ void syscall_filesize(struct intr_frame *);
 void syscall_read(struct intr_frame *);
 void syscall_write(struct intr_frame *);
 void syscall_seek(struct intr_frame *);
+void syscall_tell(struct intr_frame *);
 
 void halt(void);
 void exit(int);
@@ -41,6 +42,7 @@ int filesize(int fd);
 int read(int,void *,unsigned);
 int write(int,const void *,unsigned);
 void seek(int,unsigned);
+unsigned tell(int);
 
 struct fd* find_fd_by_num(int num);
 
@@ -113,7 +115,7 @@ syscall_handler (struct intr_frame *f)
     syscall_seek(f);
     break;
   case SYS_TELL:
-    printf("SYS_TELL!\n");
+    syscall_tell(f);
     break;
   case SYS_CLOSE:
     printf("SYS_CLOSE!\n");
@@ -123,7 +125,7 @@ syscall_handler (struct intr_frame *f)
     break;
   }
   //printf ("system call!\n");
-  thread_exit ();
+  //thread_exit ();
 }
 
 void 
@@ -307,4 +309,18 @@ seek(int num, unsigned position)
 {
   struct fd *fd = find_fd_by_num(num);
   file_seek(fd->file,position); 
+}
+
+void
+syscall_tell(struct intr_frame *f)
+{
+  int td = *(int*)(f->esp+4);
+  tell(td);
+}
+
+unsigned
+tell(int num)
+{
+  struct fd *fd = find_fd_by_num(num);
+  return file_tell(fd->file);
 }
