@@ -92,27 +92,39 @@ start_process (void *file_name_)
   //printf("start arg passing\n");
   /* 参数传递 */
   char *esp =(char *)if_.esp; // 维护栈顶
-  char *argv[256]; // 存储的参数地址
+  //printf("%p\ttop stack\n",esp);
+  int argv[128]; // 存储的参数地址
   int argc = 0, tokenlen = 0; // argc:参数数量 tokenlen:token长度
   for( ; token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
-    //printf("token: %s\n",token);
     tokenlen = strlen(token)+1; //'(token)\0'
+    //printf("token:%s tokenlen:%d\n",token,tokenlen);
     esp -= tokenlen; // decrements the stack pointer
     strlcpy(esp, token , tokenlen+1); // right-to-left order
+    //printf("%p\t%s\n",esp,esp);
     argv[argc++] = esp; 
   }
   while((int)esp % 4!=0){ // word-align
     esp--;
   }
+  //printf("%p word-align\n",esp);
   int *tmp = esp-4; // 接下来存argv地址
-  *tmp--= 0; // argv[argc+1] 
+  *tmp = 0; // argv[argc+1]
+  //printf("%p\t%p\n",tmp,*tmp);
+  tmp--; 
   int i;
   for(i=argc-1;i>=0;i--){
-    *tmp--= (int *)argv[i];
+    *tmp = argv[i];
+    //printf("%p\t%p\n",tmp,*tmp);
+    tmp--;
   }
-  *tmp--= tmp+1; // argv
-  *tmp--= argc; // argc;
+  *tmp = tmp+1; // argv
+  //printf("%p\t%p\n",tmp,*tmp);
+  tmp--;
+  *tmp = argc; // argc;
+  //printf("%p\t%d\n",tmp,*tmp);
+  tmp--;
   *tmp = 0; // return address
+  //printf("%p\t%p\n",tmp,*tmp);
   if_.esp = tmp;// 栈更新 
   
 
