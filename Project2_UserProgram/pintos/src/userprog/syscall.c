@@ -97,6 +97,16 @@ pointer_valid(uint32_t esp,int num)
   return true;
 }
 
+bool 
+char_pointer_valid(char *pointer)
+{
+  if(pointer == NULL || !pointer_valid(pointer,1))
+  {
+    return false;
+  }
+  return true;
+}
+
 void
 syscall_init (void) 
 {
@@ -243,7 +253,7 @@ syscall_create(struct intr_frame *f)
     exit(-1);
   }
   char *file = *(char**)(f->esp+4);
-  if(file == NULL)
+  if(!char_pointer_valid(file))
   {
     exit(-1);
   }
@@ -265,7 +275,7 @@ syscall_remove(struct intr_frame *f)
     exit(-1);
   }
   char *file = *(char**)(f->esp+4);
-  if(file == NULL)
+  if(!char_pointer_valid(file))
   {
     exit(-1);
   }
@@ -286,7 +296,7 @@ syscall_open(struct intr_frame *f)
     exit(-1);
   }
   char *file = *(char**)(f->esp+4);
-  if(file == NULL)
+  if(!char_pointer_valid(file))
   {
     exit(-1);
   }
@@ -340,7 +350,7 @@ syscall_read(struct intr_frame *f)
   int fd = *(int*)(f->esp+4);
   void *buffer = *(char**)(f->esp+8);
   unsigned size = *(unsigned*)(f->esp+12);
-  if(buffer == NULL)
+  if(!char_pointer_valid(buffer))
   {
     exit(-1);
   }
@@ -373,7 +383,7 @@ syscall_write(struct intr_frame *f)
   int fd = *(int*)(f->esp+4);
   void *buffer = *(char**)(f->esp+8);
   unsigned size = *(unsigned*)(f->esp+12);
-  if(buffer == NULL)
+  if(!char_pointer_valid(buffer))
   {
     exit(-1);
   }
@@ -416,7 +426,7 @@ seek(int num, unsigned position)
 void
 syscall_tell(struct intr_frame *f)
 {
-   if(!pointer_valid(f->esp+4,1))
+  if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
@@ -434,7 +444,7 @@ tell(int num)
 void
 syscall_close(struct intr_frame *f)
 {
-   if(!pointer_valid(f->esp+4,1))
+  if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
   }
