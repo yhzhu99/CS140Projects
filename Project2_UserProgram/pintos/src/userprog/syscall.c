@@ -370,6 +370,10 @@ read(int num,void *buffer,unsigned size)
     return size;
   }
   struct fd* fd = find_fd_by_num(num);
+  if(fd == NULL)
+  {
+    exit(-1);
+  }
   return file_read(fd->file,buffer,size);
 }
 
@@ -401,6 +405,10 @@ write(int num,const void* buffer,unsigned size)
     return size;
   }
   struct fd* fd = find_fd_by_num(num);
+  if(fd == NULL)
+  {
+    exit(-1);
+  }
   return file_write(fd->file,buffer,size); 
 }
 
@@ -420,6 +428,10 @@ void
 seek(int num, unsigned position)
 {
   struct fd *fd = find_fd_by_num(num);
+  if(fd == NULL)
+  {
+    exit(-1);
+  }
   file_seek(fd->file,position); 
 }
 
@@ -438,6 +450,10 @@ unsigned
 tell(int num)
 {
   struct fd *fd = find_fd_by_num(num);
+  if(fd == NULL)
+  {
+    exit(-1);
+  }
   return file_tell(fd->file);
 }
 
@@ -456,6 +472,10 @@ void
 close(int num)
 {
   struct fd *fd = find_fd_by_num(num);
+  if(fd == NULL)
+  {
+    exit(-1);
+  }
   file_close(fd->file);
   file_allow_write(fd->num);
 }
