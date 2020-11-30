@@ -12,6 +12,7 @@
 #include "devices/shutdown.h"
 #include "userprog/process.h"
 #include "filesys/filesys.h"
+#include "filesys/file.h"
 #include <string.h>
 
 static void syscall_handler (struct intr_frame *);
@@ -23,6 +24,7 @@ void syscall_wait(struct intr_frame *);
 void syscall_create(struct intr_frame *);
 void syscall_remove(struct intr_frame *);
 void syscall_open(struct intr_frame *);
+void syscall_filesize(struct intr_frame *);
 
 void halt(void);
 void exit(int);
@@ -31,6 +33,22 @@ int wait(pid_t pid);
 bool create(const char*,unsigned);
 bool remove(const char*);
 int open(const char*);
+int filesize(int fd);
+
+struct fd* find_fd_by_num(int num);
+
+struct fd*
+find_fd_by_num(int num)
+{
+  struct list_elem *e;
+  for (e = list_begin (&file_list); e != list_end (&file_list); e = e->prev)
+  {
+    struct fd *fd = list_entry (e, struct fd, allelem);
+    if(fd->num == num)return fd;
+  }
+  return NULL;
+}
+
 
 void
 syscall_init (void) 
@@ -67,7 +85,7 @@ syscall_handler (struct intr_frame *f)
     syscall_open(f);
     break;
   case SYS_FILESIZE:
-    printf("SYS_FILESIZE!\n");
+    syscall_filesize(f);
     break;  
   case SYS_READ:
     printf("SYS_READ!\n");
@@ -192,4 +210,22 @@ open(const char* file)
   list_push_back(&file_list,fd->allelem);
   list_push_back(&cur->fd_list,fd->elem);
   return fd->num;
+}
+
+void
+syscall_filesize(struct intr_frame *f)
+{
+  int fd = (int*)(f->esp+4);
+  filesize(fd);
+}
+
+int 
+filesize(int num)
+{
+  struct fd *fd = find_fd_by_num(num);
+  if(fd == NULL)
+  {
+    exit(-1);
+  }
+  return file_length(fd->file);
 }
