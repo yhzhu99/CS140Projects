@@ -161,7 +161,7 @@ void
 syscall_exec(struct intr_frame *f)
 {
   char *cmd_line = *(char**)(f->esp+4);
-  exec(cmd_line);
+  f->eax = exec(cmd_line);
 }
 
 
@@ -175,7 +175,7 @@ void
 syscall_wait(struct intr_frame *f)
 {
   pid_t pid = *(int*)(f->esp+4);
-  wait(pid);
+  f->eax = wait(pid);
 }
 
 int 
@@ -189,7 +189,7 @@ syscall_create(struct intr_frame *f)
 {
   char *file = *(char**)(f->esp+4);
   unsigned initial_size = *(int *)(f->esp+8);
-  create(file,initial_size);
+  f->eax = create(file,initial_size);
 }
 
 bool 
@@ -202,7 +202,7 @@ void
 syscall_remove(struct intr_frame *f)
 {
   char *file = *(char**)(f->esp+4);
-  remove(file);
+  f->eax = remove(file);
 }
 
 bool 
@@ -215,7 +215,7 @@ void
 syscall_open(struct intr_frame *f)
 {
   char *file = *(char**)(f->esp+4);
-  open(file);
+  f->eax = open(file);
 }
 
 int 
@@ -229,6 +229,7 @@ open(const char* file)
   struct thread *cur = thread_current();
   list_push_back(&file_list,&fd->allelem);
   list_push_back(&cur->fd_list,&fd->elem);
+  file_deny_write(f);
   return fd->num;
 }
 
@@ -236,7 +237,7 @@ void
 syscall_filesize(struct intr_frame *f)
 {
   int fd = *(int*)(f->esp+4);
-  filesize(fd);
+  f->eax = filesize(fd);
 }
 
 int 
@@ -256,7 +257,7 @@ syscall_read(struct intr_frame *f)
   int fd = *(int*)(f->esp+4);
   void *buffer = *(char**)(f->esp+8);
   unsigned size = *(unsigned*)(f->esp+12);
-  read(fd,buffer,size);
+  f->eax = read(fd,buffer,size);
 }
 
 int 
@@ -281,7 +282,7 @@ syscall_write(struct intr_frame *f)
   int fd = *(int*)(f->esp+4);
   void *buffer = *(char**)(f->esp+8);
   unsigned size = *(unsigned*)(f->esp+12);
-  write(fd,buffer,size);
+  f->eax = write(fd,buffer,size);
 }
 
 int 
@@ -317,7 +318,7 @@ void
 syscall_tell(struct intr_frame *f)
 {
   int td = *(int*)(f->esp+4);
-  tell(td);
+  f->eax = tell(td);
 }
 
 unsigned
@@ -339,4 +340,5 @@ close(int num)
 {
   struct fd *fd = find_fd_by_num(num);
   file_close(fd->file);
+  file_allow_write(fd->num);
 }
