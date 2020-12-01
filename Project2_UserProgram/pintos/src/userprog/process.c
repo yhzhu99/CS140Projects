@@ -23,6 +23,33 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+struct child_process_status*
+get_child_status(int tid)
+{
+  struct list_elem *e;
+  struct thread *cur = thread_current();
+  struct child_process_status* child_status = NULL;
+  for (e = list_begin (&cur->child_status); e != list_end (&cur->child_status); e = e->prev)
+  {
+    child_status = list_entry (e, struct child_process_status, elem);
+    if(child_status->tid == tid)return child_status;
+  }
+  return NULL;
+}
+
+struct thread *
+get_child_by_tid(struct list *waiters,int tid)
+{
+  struct list_elem *e;
+  struct thread * child = NULL;
+  for (e = list_begin (waiters); e != list_end (waiters); e = e->prev)
+  {
+    child = list_entry (e, struct thread, elem);
+    if(child->tid == tid)return child;
+  }
+  return NULL;
+}
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -36,23 +63,26 @@ process_execute (const char *file_name)
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
+  fn_copy = palloc_get_page(0);
+  //printf("malloc fncopy success\n");
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
+  strlcpy (fn_copy, file_name, strlen(file_name)+1);
   
   /* Make a copy of FILE_NAME.
      Otherwise there's a page fault*/
   char *token = malloc(strlen(file_name)+1);
+  if(token == NULL)return TID_ERROR;
   strlcpy (token,file_name, strlen(file_name)+1);
+  //printf("malloc token success\n");
   char *save_ptr = NULL;
   token = strtok_r(token," ",&save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
-  //printf("get token %s\n",token);
+  //printf("get token\n");
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  //printf("thread_created\n");
   free(token);
-  //printf("%s thread_created\n",token);
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy); 
     return tid;
@@ -60,15 +90,16 @@ process_execute (const char *file_name)
 
 
   /* 创建成功 */
-  //printf("%d %s thread_created success\n",tid,token);
-#ifdef USERPROG
-  enum intr_level old_level = intr_disable ();
+  //printf("thread_created success\n");
   struct thread *parent = thread_current();          /* 当前进程就是父进程 */
   struct thread *child = get_thread_by_tid(tid);     /* 根据tid找到子进程 */
   child->parent_tid = parent->tid;                   /* 更新parent_id */
-  list_push_back(&parent->child_list,&child->cpelem);/* push */
-  intr_set_level (old_level);            
-#endif
+  struct child_process_status* relay_status = malloc(sizeof(struct child_process_status));
+  child->relay_status = relay_status;
+  child->relay_status->tid = tid;
+  list_push_back(&parent->child_status,&child->relay_status->elem);
+  //printf("process sema down\n",thread_current()->name);
+  sema_down(&parent->sema);                          /* 阻塞，等待子进程执行完start process*/            
   return tid; 
 }
 
@@ -99,10 +130,17 @@ start_process (void *file_name_)
   /* 加载用户进程的eip和esp eip:执行指令地址 esp:栈顶地址 */
   success = load (token, &if_.eip, &if_.esp);
 
-  //printf("loaded %d\n",success);
+  //printf("%s loaded.\n",thread_current()->name);
     /* If load failed, quit. */
   if (!success)
-    exit(-1); 
+  {
+    struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
+    thread_current()->relay_status->ret_status = -1;
+    //printf("%s process loaded failed, sema_up parent %s\n",thread_current()->name,parent->name);
+    sema_up(&parent->sema);
+    exit(-1);
+  }
+     
     //thread_exit ();
 
   //printf("start arg passing\n");
@@ -147,7 +185,10 @@ start_process (void *file_name_)
 
   palloc_free_page (file_name);
 
-
+  struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
+  //printf("%s process loaded success, sema_up parent %s\n",thread_current()->name,parent->name);
+  sema_up(&parent->sema);
+  sema_down(&parent->sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -172,16 +213,24 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
   if(child_tid == TID_ERROR)return -1;            /* TID invalid */
-  struct thread* child = get_child_by_tid(&thread_current()->child_list,child_tid);
-  if(child==NULL)return -1; /* not child_tid */
-  int ret = child->ret;
+  struct child_process_status *child_status = get_child_status(child_tid);
+  if(child_status == NULL)return -1;              /* not child_tid */
+  if(child_status->ret_status == -1)return -1;
+  struct thread* child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
+  if(child==NULL)return child_status->ret_status; 
   //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
   while(child!=NULL){
-    //printf("process %d wait %d\n",thread_tid(),child_tid);
-    thread_yield();
-    child = get_child_by_tid(&thread_current()->child_list,child_tid);
+    //printf("process %s wait %s\n",thread_current()->name,child->name);
+    sema_down(&thread_current()->sema);
+    child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
   }
-  return ret;
+  child_status = get_child_status(child_tid);
+  if(child_status == NULL)
+  {
+    printf("what the fuck?\n");
+    return -1;
+  }
+  return child_status->ret_status;
 }
 
 /* Free the current process's resources. */
@@ -191,8 +240,10 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
   printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
-  list_remove (&thread_current()->cpelem);
-  // if(cur->tid==1)return;                          /* kernel进程，不释放资源 */
+  cur->relay_status->ret_status = cur->ret;
+  struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
+  //printf("%s exit, semaup parent %s\n",thread_current()->name,parent->name);
+  sema_up(&parent->sema);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
 

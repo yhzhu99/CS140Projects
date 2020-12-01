@@ -93,22 +93,29 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     int ret;                            /* exit status */  
-    struct list child_list;             /* 子进程列表 */
-    struct list_elem cpelem;            /* elem for child_list */
+    struct semaphore sema;              /* 子进程将会在该信号量上等待 */
     tid_t parent_tid;                   /* 父进程的tid */
     struct list fd_list;                /* 拥有的file descriptor */
     int fd_num;                         /* fd的编号,从2开始,只增不减 */
-
-
-#endif
+    struct list child_status;           /* 子进程状态列表，使得子进程结束后父进程也能获得子进程的状态 */  
+    struct child_process_status *relay_status;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+struct child_process_status         /* 该进程作为子进程的状态 */
+{
+   int tid;                          /* 子进程编号 */
+   int ret_status;                   
+   /* 如果为-1表示异常退出,子进程可能以及结束,父进程直接认为该子进程返回状态为-1 
+      其他情况下,需要判断子进程是否不在信号量上,如果不在表示已经推出,那么该ret_status就是子进程的返回值. */
+   struct list_elem elem;            /* elem for child_status */
+};
+
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.

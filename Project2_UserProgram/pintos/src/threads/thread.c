@@ -90,24 +90,6 @@ get_thread_by_tid(tid_t tid)
   return NULL;
 }
 
-struct thread*
-get_child_by_tid(struct list* list, tid_t tid)
-{
-  enum intr_level old_level;
-  old_level = intr_disable();
-  struct list_elem* e;
-  for (e = list_begin (list); e != list_end (list);
-      e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, cpelem);
-      if(t->tid == tid){
-        intr_set_level(old_level);
-        return t;
-      }
-    }
-  intr_set_level(old_level);
-  return NULL;
-}
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -131,10 +113,15 @@ thread_init (void)
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
+  printf("1");
   initial_thread = running_thread ();
+  printf("2");
   init_thread (initial_thread, "main", PRI_DEFAULT);
+  printf("3");
   initial_thread->status = THREAD_RUNNING;
+  printf("4");
   initial_thread->tid = allocate_tid ();
+  printf("5");
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -501,14 +488,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-#ifdef USERPROG
 
-  list_init(&t->child_list);              /* 初始化子进程列表 */
+  sema_init(&t->sema, 0);                 /* 初始化信号量 */
   list_init(&t->fd_list);                 /* 初始化拥有的file descriptor */
   t->fd_num = 2;                          /* 0 和 1 为console拥有 */
-  
-#endif
-
+  list_init(&t->child_status);            /* 初始化子进程状态列表 */
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
