@@ -70,6 +70,7 @@ struct fd{
     struct list_elem elem;
 };
 struct list file_list;
+struct lock file_lock;
 
 struct fd*
 find_fd_by_num(int num)
@@ -126,6 +127,7 @@ syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
   list_init(&file_list);
+  lock_init(&file_lock);
 }
 
 static void
@@ -273,7 +275,9 @@ syscall_create(struct intr_frame *f)
     exit(-1);
   }
   unsigned initial_size = *(int *)(f->esp+8);
+  lock_acquire(&file_lock);
   f->eax = create(file,initial_size);
+  lock_release(&file_lock);
 }
 
 bool 
@@ -294,7 +298,9 @@ syscall_remove(struct intr_frame *f)
   {
     exit(-1);
   }
+  lock_acquire(&file_lock);
   f->eax = remove(file);
+  lock_release(&file_lock);
 }
 
 bool 
@@ -315,7 +321,9 @@ syscall_open(struct intr_frame *f)
   {
     exit(-1);
   }
+  lock_acquire(&file_lock);
   f->eax = open(file);
+  lock_release(&file_lock);
 }
 
 int 
@@ -341,7 +349,9 @@ syscall_filesize(struct intr_frame *f)
     exit(-1);
   }
   int fd = *(int*)(f->esp+4);
+  lock_acquire(&file_lock);
   f->eax = filesize(fd);
+  lock_release(&file_lock);
 }
 
 int 
@@ -369,7 +379,9 @@ syscall_read(struct intr_frame *f)
   {
     exit(-1);
   }
+  lock_acquire(&file_lock);
   f->eax = read(fd,buffer,size);
+  lock_release(&file_lock);
 }
 
 int 
@@ -407,7 +419,9 @@ syscall_write(struct intr_frame *f)
   {
     exit(-1);
   }
+  lock_acquire(&file_lock);
   f->eax = write(fd,buffer,size);
+  lock_release(&file_lock);
 }
 
 int 
@@ -437,7 +451,9 @@ syscall_seek(struct intr_frame *f)
   }
   int fd = *(int*)(f->esp+4);
   unsigned position = *(unsigned*)(f->esp+8);
+  lock_acquire(&file_lock);
   seek(fd,position);
+  lock_release(&file_lock);
 }
 
 void
@@ -459,7 +475,9 @@ syscall_tell(struct intr_frame *f)
     exit(-1);
   }
   int td = *(int*)(f->esp+4);
+  lock_acquire(&file_lock);
   f->eax = tell(td);
+  lock_release(&file_lock);
 }
 
 unsigned
@@ -481,7 +499,9 @@ syscall_close(struct intr_frame *f)
     exit(-1);
   }
   int fd = *(int*)(f->esp+4);
+  lock_acquire(&file_lock);
   close(fd);
+  lock_release(&file_lock);
 }
 
 void
