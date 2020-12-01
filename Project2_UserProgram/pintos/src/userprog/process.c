@@ -22,6 +22,18 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+char *
+get_file_name(const char * file_name)
+{
+  int i=0;
+  char *res = malloc(128);
+  while(file_name[i]!=' ')
+  {
+    res[i] = file_name[i];
+    i++;
+  }
+  return res;
+}
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -39,9 +51,10 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  char *token, *save_ptr;
-  token = strtok_r((char*)file_name," ",&save_ptr);
+  char *token = NULL, *save_ptr = NULL;
+  token = get_file_name(file_name);
   /* Create a new thread to execute FILE_NAME. */
+  //printf("get token %s\n",token);
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
   //printf("%s thread_created\n",token);
   if (tid == TID_ERROR){

@@ -229,7 +229,7 @@ syscall_exec(struct intr_frame *f)
     exit(-1);
   }
   char *cmd_line = *(char**)(f->esp+4);
-  if(cmd_line == NULL)
+  if(!char_pointer_valid(cmd_line))
   {
     exit(-1);
   }
