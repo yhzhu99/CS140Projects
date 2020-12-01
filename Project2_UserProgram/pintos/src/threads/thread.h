@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "synch.h"
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -100,6 +101,7 @@ struct thread
     struct list_elem cpelem;            /* elem for child_list */
     tid_t parent_tid;                   /* 父进程的tid */
     struct list fd_list;                /* 拥有的file descriptor */
+    int fd_num;                         /* fd的编号,从2开始,只增不减 */
 
 
 #endif

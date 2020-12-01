@@ -29,7 +29,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-  printf("%s process_execute\n",file_name);
+  //printf("%s process_execute\n",file_name);
   char *fn_copy;
   char *file_name_ = file_name;
   tid_t tid;
@@ -57,7 +57,7 @@ process_execute (const char *file_name)
 
 
   /* 创建成功 */
-  printf("%d %s thread_created success\n",tid,token);
+  //printf("%d %s thread_created success\n",tid,token);
 #ifdef USERPROG
   enum intr_level old_level = intr_disable ();
   struct thread *parent = thread_current();          /* 当前进程就是父进程 */
@@ -76,7 +76,7 @@ static void
 start_process (void *file_name_)
 {
   char *file_name = file_name_;
-  printf("%s process start\n",file_name_);
+  //printf("%s process start\n",file_name_);
   struct intr_frame if_;
   bool success;
 
@@ -170,7 +170,7 @@ process_wait (tid_t child_tid UNUSED)
   int ret = child->ret;
   //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
   while(child!=NULL){
-    printf("process %d wait %d\n",thread_tid(),child_tid);
+    //printf("process %d wait %d\n",thread_tid(),child_tid);
     thread_yield();
     child = get_child_by_tid(&thread_current()->child_list,child_tid);
   }
