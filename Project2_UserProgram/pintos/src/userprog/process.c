@@ -31,7 +31,6 @@ process_execute (const char *file_name)
 {
   //printf("%s process_execute\n",file_name);
   char *fn_copy;
-  char *file_name_ = file_name;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -40,15 +39,18 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-
+  
   /* Make a copy of FILE_NAME.
      Otherwise there's a page fault*/
-  char *token = NULL, *save_ptr = NULL;
-  token = strtok_r(file_name_," ",&save_ptr);
+  char *token = malloc(strlen(file_name)+1);
+  strlcpy (token,file_name, strlen(file_name)+1);
+  char *save_ptr = NULL;
+  token = strtok_r(token," ",&save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
   //printf("get token %s\n",token);
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  free(token);
   //printf("%s thread_created\n",token);
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy); 
@@ -86,8 +88,12 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
 
-  char *token , *save_ptr;
-  token = strtok_r(file_name," ",&save_ptr);
+  /* Make a copy of FILE_NAME.
+     Otherwise there's a page fault*/
+  char *token = malloc(strlen(file_name)+1);
+  strlcpy (token,file_name, strlen(file_name)+1);
+  char *save_ptr = NULL;
+  token = strtok_r(token," ",&save_ptr);
 
   /* 加载用户进程的eip和esp eip:执行指令地址 esp:栈顶地址 */
   success = load (token, &if_.eip, &if_.esp);
