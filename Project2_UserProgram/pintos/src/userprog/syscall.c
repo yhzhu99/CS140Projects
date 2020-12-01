@@ -61,6 +61,7 @@ void close(int);
 
 struct fd* find_fd_by_num(int);
 bool pointer_valid(void *,int);
+void close_all_fd(void);
 
 /* file descriptor */
 struct fd{
@@ -71,7 +72,6 @@ struct fd{
 };
 struct list file_list;
 int fd_num = 2;
-struct lock file_lock;
 
 struct fd*
 find_fd_by_num(int num)
@@ -111,11 +111,22 @@ char_pointer_valid(char *pointer)
 }
 
 void
+close_all_fd()
+{
+  struct list_elem *e;
+  struct thread *cur = thread_current ();
+  while (!list_empty (&cur->fd_list))
+  {
+    e = list_begin (&cur->fd_list);
+    close (list_entry (e, struct fd, elem)->num);
+  }
+}
+
+void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
   list_init(&file_list);
-  lock_init(&file_lock);
 }
 
 static void
@@ -205,7 +216,7 @@ syscall_exit(struct intr_frame *f)
 void
 exit(int status)
 {
-  //todo: close all files
+  close_all_fd();
   thread_current()->ret = status;
   thread_exit();
 }
@@ -222,9 +233,7 @@ syscall_exec(struct intr_frame *f)
   {
     exit(-1);
   }
-  lock_acquire(&file_lock);
   f->eax = exec(cmd_line);
-  lock_release(&file_lock);
 }
 
 
@@ -306,9 +315,7 @@ syscall_open(struct intr_frame *f)
   {
     exit(-1);
   }
-  lock_acquire(&file_lock);
   f->eax = open(file);
-  lock_release(&file_lock);
 }
 
 int 
@@ -363,9 +370,7 @@ syscall_read(struct intr_frame *f)
   {
     exit(-1);
   }
-  lock_acquire(&file_lock);
   f->eax = read(fd,buffer,size);
-  lock_release(&file_lock);
 }
 
 int 
@@ -403,9 +408,7 @@ syscall_write(struct intr_frame *f)
   {
     exit(-1);
   }
-  lock_acquire(&file_lock);
   f->eax = write(fd,buffer,size);
-  lock_release(&file_lock);
 }
 
 int 
