@@ -319,7 +319,6 @@ void
 thread_exit (void) 
 {
   ASSERT (!intr_context ());
-  list_remove (&thread_current()->cpelem);
 #ifdef USERPROG
   process_exit ();
 #endif

@@ -240,6 +240,7 @@ syscall_exec(struct intr_frame *f)
 pid_t
 exec(const char* cmd_line)
 {
+  //printf("exec %s\n",cmd_line);
   return process_execute(cmd_line);
 }
 

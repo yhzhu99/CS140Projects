@@ -22,18 +22,6 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
-char *
-get_file_name(const char * file_name)
-{
-  int i=0;
-  char *res = malloc(128);
-  while(file_name[i]!=' ')
-  {
-    res[i] = file_name[i];
-    i++;
-  }
-  return res;
-}
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -51,8 +39,17 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+
+  /* Make a copy of FILE_NAME.
+     Otherwise there's a page fault*/
+  char *tmp = malloc(strlen(file_name)+1);
+  strlcpy(tmp,file_name,strlen(file_name)+1);
+
+  /* Get the real FILE_NAME. */
   char *token = NULL, *save_ptr = NULL;
-  token = get_file_name(file_name);
+  token = strtok(tmp," ",&save_ptr);
+  free(tmp);
+  
   /* Create a new thread to execute FILE_NAME. */
   //printf("get token %s\n",token);
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
@@ -62,7 +59,7 @@ process_execute (const char *file_name)
     return tid;
   }
   /* 创建成功 */
-  //printf("thread_created success\n");
+  printf("%d %s thread_created success\n",tid,token);
 #ifdef USERPROG
   enum intr_level old_level = intr_disable ();
   struct thread *parent = thread_current();          /* 当前进程就是父进程 */
@@ -81,7 +78,7 @@ static void
 start_process (void *file_name_)
 {
   char *file_name = file_name_;
-  //printf("%s start\n",file_name_);
+  printf("%s start\n",file_name_);
   struct intr_frame if_;
   bool success;
 
@@ -99,8 +96,9 @@ start_process (void *file_name_)
 
   //printf("loaded %d\n",success);
     /* If load failed, quit. */
-  if (!success) 
-    thread_exit ();
+  if (!success)
+    exit(-1); 
+    //thread_exit ();
 
   //printf("start arg passing\n");
   /* 参数传递 */
@@ -168,14 +166,14 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  //printf("process_wait %d\n",child_tid);
+  printf("process_wait %d\n",child_tid);
   if(child_tid == TID_ERROR)return -1;            /* TID invalid */
   struct thread* child = get_child_by_tid(&thread_current()->child_list,child_tid);
   if(child==NULL)return -1; /* not child_tid */
   int ret = child->ret;
-  //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
+  printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
   while(child!=NULL){
-    //printf("%d yield\n",thread_current()->tid);
+    printf("%d yield\n",thread_current()->tid);
     thread_yield();
     child = get_child_by_tid(&thread_current()->child_list,child_tid);
   }
@@ -189,12 +187,12 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
   printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
-
+  list_remove (&thread_current()->cpelem);
   // if(cur->tid==1)return;                          /* kernel进程，不释放资源 */
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
 
-  // 释放当前进程文件资源
+  // 释放当前进程文件资源 关闭该进程的所有fd
   // 释放子进程所有资源
 
   
