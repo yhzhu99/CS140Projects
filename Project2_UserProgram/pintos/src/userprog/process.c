@@ -18,6 +18,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
+#include "syscall.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -324,6 +325,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
   //printf("filesys_open\n");
   /* Open executable file. */
+  lock_acquire(&file_lock);
   file = filesys_open (file_name);
   if (file == NULL) 
     {
@@ -415,6 +417,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
+  lock_release(&file_lock);
   return success;
 }
 

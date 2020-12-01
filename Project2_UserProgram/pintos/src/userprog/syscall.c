@@ -70,7 +70,6 @@ struct fd{
     struct list_elem elem;
 };
 struct list file_list;
-struct lock file_lock;
 
 struct fd*
 find_fd_by_num(int num)
