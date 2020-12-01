@@ -91,6 +91,8 @@ process_execute (const char *file_name)
 
   /* 创建成功 */
   //printf("thread_created success\n");
+  enum intr_level old_level;
+  old_level = intr_disable ();
   struct thread *parent = thread_current();          /* 当前进程就是父进程 */
   struct thread *child = get_thread_by_tid(tid);     /* 根据tid找到子进程 */
   child->parent_tid = parent->tid;                   /* 更新parent_id */
@@ -98,6 +100,7 @@ process_execute (const char *file_name)
   child->relay_status = relay_status;
   child->relay_status->tid = tid;
   list_push_back(&parent->child_status,&child->relay_status->elem);
+  intr_set_level(old_level);
   //printf("process sema down\n",thread_current()->name);
   sema_down(&parent->sema);                          /* 阻塞，等待子进程执行完start process*/            
   return tid; 

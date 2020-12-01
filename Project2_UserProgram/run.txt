@@ -3,3 +3,5 @@ pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/read-normal -a read-
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/read-boundary -a read-boundary -p ../../tests/userprog/sample.txt -a sample.txt -- -q  -f run read-boundary
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/exec-arg -a exec-arg -p tests/userprog/child-args -a child-args -- -q  -f run exec-arg
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/exec-bound-3 -a exec-bound-3 -- -q  -f run exec-bound-3
+pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/halt -a halt -- -q  -f run halt
+pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/create-empty -a create-empty -- -q  -f run create-empty

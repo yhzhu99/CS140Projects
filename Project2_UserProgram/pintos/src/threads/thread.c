@@ -113,15 +113,11 @@ thread_init (void)
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
-  printf("1");
   initial_thread = running_thread ();
-  printf("2");
   init_thread (initial_thread, "main", PRI_DEFAULT);
-  printf("3");
   initial_thread->status = THREAD_RUNNING;
-  printf("4");
   initial_thread->tid = allocate_tid ();
-  printf("5");
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.

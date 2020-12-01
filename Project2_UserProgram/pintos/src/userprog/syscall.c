@@ -264,6 +264,7 @@ wait(pid_t pid)
 void 
 syscall_create(struct intr_frame *f)
 {
+  //printf("%s syscall_create\n",thread_current()->name);
   if(!pointer_valid(f->esp+4,2))
   {
     exit(-1);
@@ -282,6 +283,7 @@ syscall_create(struct intr_frame *f)
 bool 
 create(const char*file , unsigned initial_size)
 {
+  //printf("%s create\n",thread_current()->name);
   return filesys_create(file,initial_size);
 }
 
