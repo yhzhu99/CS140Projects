@@ -144,45 +144,59 @@ syscall_handler (struct intr_frame *f)
   switch (*p)
   {
   case SYS_HALT:
+    printf("sys_halt\n");
     syscall_halt();
     break;
   case SYS_EXIT:
+    printf("sys_exit\n");
     syscall_exit(f);
     break;
   case SYS_EXEC:
+    printf("sys_exec\n");
     syscall_exec(f);
     break;
   case SYS_WAIT:
+    printf("sys_wait\n");
     syscall_wait(f);
     break;
   case SYS_CREATE:
+    printf("sys_create\n");
     syscall_create(f);
     break;
   case SYS_REMOVE:
+    printf("sys_remove\n");
     syscall_remove(f);
     break;
   case SYS_OPEN:
+    printf("sys_open\n");
     syscall_open(f);
     break;
   case SYS_FILESIZE:
+    printf("sys_filesize\n");
     syscall_filesize(f);
     break;  
   case SYS_READ:
+    printf("sys_read\n");
     syscall_read(f);
     break;
   case SYS_WRITE:
+    printf("sys_write\n");
     syscall_write(f);
     break;
   case SYS_SEEK:
+    printf("sys_seek\n");
     syscall_seek(f);
     break;
   case SYS_TELL:
+    printf("sys_tell\n");
     syscall_tell(f);
     break;
   case SYS_CLOSE:
+    printf("sys_close\n");
     syscall_close(f);
     break;
   default:
+    printf("sys_default\n");
     exit(-1);
     break;
   }
@@ -416,6 +430,7 @@ int
 write(int num,const void* buffer,unsigned size)
 {
   /* Fd 1 writes to the console. Your code to write to the console should write all of buffer in one call to putbuf() */
+  printf("syswrite fdnum:%d\n",num);
   if(num == 1)
   {
     int i;
@@ -427,6 +442,7 @@ write(int num,const void* buffer,unsigned size)
   {
     exit(-1);
   }
+  printf("%d process write\n",thread_tid());
   return file_write(fd->file,buffer,size); 
 }
 

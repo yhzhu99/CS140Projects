@@ -29,8 +29,9 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-  //printf("%s process_execute\n",file_name);
+  printf("%s process_execute\n",file_name);
   char *fn_copy;
+  char *file_name_ = file_name;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -42,14 +43,9 @@ process_execute (const char *file_name)
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a page fault*/
-  char *tmp = malloc(strlen(file_name)+1);
-  strlcpy(tmp,file_name,strlen(file_name)+1);
-
-  /* Get the real FILE_NAME. */
   char *token = NULL, *save_ptr = NULL;
-  token = strtok(tmp," ",&save_ptr);
-  free(tmp);
-  
+  token = strtok_r(file_name_," ",&save_ptr);
+
   /* Create a new thread to execute FILE_NAME. */
   //printf("get token %s\n",token);
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
@@ -58,6 +54,8 @@ process_execute (const char *file_name)
     palloc_free_page (fn_copy); 
     return tid;
   }
+
+
   /* 创建成功 */
   printf("%d %s thread_created success\n",tid,token);
 #ifdef USERPROG
@@ -78,7 +76,7 @@ static void
 start_process (void *file_name_)
 {
   char *file_name = file_name_;
-  printf("%s start\n",file_name_);
+  printf("%s process start\n",file_name_);
   struct intr_frame if_;
   bool success;
 
@@ -166,14 +164,13 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  printf("process_wait %d\n",child_tid);
   if(child_tid == TID_ERROR)return -1;            /* TID invalid */
   struct thread* child = get_child_by_tid(&thread_current()->child_list,child_tid);
   if(child==NULL)return -1; /* not child_tid */
   int ret = child->ret;
-  printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
+  //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
   while(child!=NULL){
-    printf("%d yield\n",thread_current()->tid);
+    printf("process %d wait %d\n",thread_tid(),child_tid);
     thread_yield();
     child = get_child_by_tid(&thread_current()->child_list,child_tid);
   }
