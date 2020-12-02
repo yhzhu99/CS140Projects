@@ -29,7 +29,7 @@ get_child_status(int tid)
   struct list_elem *e;
   struct thread *cur = thread_current();
   struct child_process_status* child_status = NULL;
-  for (e = list_begin (&cur->child_status); e != list_end (&cur->child_status); e = e->prev)
+  for (e = list_begin (&cur->child_status); e != list_end (&cur->child_status); e = list_next(e))
   {
     child_status = list_entry (e, struct child_process_status, elem);
     if(child_status->tid == tid)return child_status;
