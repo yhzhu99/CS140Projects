@@ -45,14 +45,12 @@ get_child_status(int tid)
 tid_t
 process_execute (const char *file_name) 
 {
-  //printf("%d process_execute %s\n",thread_tid(),file_name);
   char *fn_copy;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = malloc(strlen(file_name)+1);
-  //printf("malloc fncopy success\n");
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, strlen(file_name)+1);
@@ -62,14 +60,11 @@ process_execute (const char *file_name)
   char *token = malloc(strlen(file_name)+1);
   if(token == NULL)return TID_ERROR;
   strlcpy (token,file_name, strlen(file_name)+1);
-  //printf("malloc token success\n");
   char *save_ptr = NULL;
   token = strtok_r(token," ",&save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
-  //printf("get token\n");
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
-  //printf("thread_created\n");
   free(token);
   if (tid == TID_ERROR){
     free(fn_copy); 
@@ -78,25 +73,12 @@ process_execute (const char *file_name)
 
 
   /* 创建成功 */
-  //printf("thread_created success\n");
-  enum intr_level old_level;
-  old_level = intr_disable ();
-  // struct thread *child = get_thread_by_tid(tid);     /* 根据tid找到子进程 */
-  // child->parent = thread_current();                   /* 更新parent_id */
-  // // struct child_process_status* relay_status = malloc(sizeof(struct child_process_status));
-  // // child->relay_status = relay_status;
-  // // child->relay_status->tid = tid;
-  // list_push_back(&child->parent->child_status,&child->relay_status->elem);
-  intr_set_level(old_level);
-  //printf("parent:%s process sema down\n",thread_current()->name);
   sema_down(&thread_current()->sema);                          /* 阻塞，等待子进程执行完loaded */            
   struct child_process_status *child_status = get_child_status(tid);
   if(child_status->finish)                              /* 子进程已经执行完毕 */
   {
     return child_status->ret_status;
   }
-  // //printf("parent:%s wake up now return tid:%d\n",thread_current()->name,tid);
-  // if(child->relay_status->ret_status == -1)return TID_ERROR;
   return tid; 
 }
 
@@ -107,7 +89,6 @@ static void
 start_process (void *file_name_)
 {
   char *file_name = file_name_;
-  //printf("%d %s process start\n",thread_tid(),file_name_);
   struct intr_frame if_;
   bool success;
 
@@ -127,67 +108,50 @@ start_process (void *file_name_)
   /* 加载用户进程的eip和esp eip:执行指令地址 esp:栈顶地址 */
   success = load (token, &if_.eip, &if_.esp);
 
-  //printf("%s loaded.\n",thread_current()->name);
     /* If load failed, quit. */
   if (!success)
   {
-    //struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
     thread_current()->relay_status->ret_status = -1;
-    //printf("%s process loaded failed, sema_up parent %s\n",thread_current()->name,parent->name);
     sema_up(&thread_current()->parent->sema);
     exit(-1);
   }
-     
-    //thread_exit ();
 
-  //printf("start arg passing\n");
+
   /* 参数传递 */
   char *esp =(char *)if_.esp; // 维护栈顶
-  //printf("%d\ttop stack\n",esp);
   int argv[128]; // 存储的参数地址
   int argc = 0, tokenlen = 0; // argc:参数数量 tokenlen:token长度
   for( ; token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
     tokenlen = strlen(token)+1; //'(token)\0'
-    //printf("token:%s tokenlen:%d\n",token,tokenlen);
     esp -= tokenlen; // decrements the stack pointer
     strlcpy(esp, token , tokenlen+1); // right-to-left order
-    //printf("%d\t%s\n",esp,esp);
     argv[argc++] = (int)esp; 
   }
   while((int)esp % 4!=0){ // word-align
     esp--;
   }
-  //printf("%p word-align\n",esp);
   int *tmp = (int*)esp; // 接下来存argv地址
   tmp--;
   *tmp = 0; // argv[argc+1]
-  //printf("%d\t%d\n",tmp,*tmp);
   tmp--; 
   int i;
   for(i=argc-1;i>=0;i--){
     *tmp = argv[i];
-    //printf("%d\t%d\n",tmp,*tmp);
     tmp--;
   }
   *tmp = (int)(tmp+1); // argv
-  //printf("%p\targv\t%d\n",tmp,*tmp);
   tmp--;
   *tmp = argc; // argc;
-  //printf("%p\targc\t%d\n",tmp,*tmp);
   tmp--;
   *tmp = 0; // return address
-  //printf("%p\treturn address\t%d\n",tmp,*tmp);
   if_.esp = tmp;// 栈更新 
   
 
   
 
   free(file_name);
-
-  //struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
-  ///printf("%s process loaded success, sema_up parent %s\n",thread_current()->name,thread_current()->parent->name);
   sema_up(&thread_current()->parent->sema);
-  //sema_down(&parent->sema);
+
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -211,29 +175,15 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  //printf("%s process wait %d\n",thread_current()->name,child_tid);
   if(child_tid == TID_ERROR)return -1;            /* TID invalid */
   struct child_process_status *child_status = get_child_status(child_tid);
   if(child_status == NULL)return -1;              /* not child_tid */
   if(child_status->iswaited)return -1;
   child_status->iswaited = true;
-  // struct thread* child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
-  // if(child==NULL)return child_status->ret_status; 
-  //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
   while(!child_status->finish)
   {
-    //printf("process %s wait %d sema down\n",thread_current()->name,child_status->tid);
-    // printf("tid:%d,finish:%d,ret_status:%d\n",child_status->tid,child_status->finish,child_status->ret_status);
-    //sema_up(&thread_current()->sema);
     sema_down(&thread_current()->sema);
-    //child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
   }
-  // child_status = get_child_status(child_tid);
-  // if(child_status == NULL)
-  // {
-  //   printf("what the fuck?\n");
-  //   return -1;
-  // }
   int res = child_status->ret_status;
   list_remove(&child_status->elem);
   free(child_status);
@@ -247,12 +197,6 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
   
-  
-
-
-  // 释放当前进程文件资源 关闭该进程的所有fd
-  // 释放子进程所有资源
-
   /* Destroy the current process's page directory and switch back
     to the kernel-only page directory. */
 
@@ -374,12 +318,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
-  //printf("pagedir created\n");
   if (t->pagedir == NULL) 
     goto done;
 
   process_activate ();
-  //printf("filesys_open\n");
   /* Open executable file. */
   lock_acquire(&file_lock);
   file = filesys_open (file_name);
@@ -388,7 +330,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-  //printf("file_read\n");
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -401,7 +342,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: error loading executable\n", file_name);
       goto done; 
     }
-  //printf("read program headers\n");
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
   for (i = 0; i < ehdr.e_phnum; i++) 
@@ -460,12 +400,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
           break;
         }
     }
-  //printf("setup_stack\n");
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
 
-  //printf("start address");
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
   success = true;
