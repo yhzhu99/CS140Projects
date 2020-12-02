@@ -28,6 +28,7 @@
 #include "threads/synch.h"
 #include "pagedir.h"
 #include <string.h>
+#include "debug.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -119,6 +120,7 @@ close_all_fd()
     e = list_begin (&cur->fd_list);
     close (list_entry (e, struct fd, elem)->num);
   }
+  file_close(cur->execfile);
 }
 
 void
@@ -253,6 +255,7 @@ syscall_wait(struct intr_frame *f)
   }
   pid_t pid = *(int*)(f->esp+4);
   f->eax = wait(pid);
+  //debug_backtrace_all();
 }
 
 int 
@@ -322,6 +325,7 @@ syscall_open(struct intr_frame *f)
   {
     exit(-1);
   }
+  //printf("%d %s open file %s\n",thread_tid(),thread_current()->name,file);
   lock_acquire(&file_lock);
   f->eax = open(file);
   lock_release(&file_lock);
@@ -331,14 +335,21 @@ int
 open(const char* file)
 {
   struct file *f = filesys_open(file);
+  //sysout_file_info(f);
+  //printf("filesize:%d\n",file_length(f));
   if(f == NULL)return -1;                                /* open failed */
   struct fd *fd = malloc(sizeof(struct fd));
+  if(fd == NULL)
+  {
+    file_close(f);
+    return -1;
+  }
   struct thread *cur = thread_current();
   fd->file = f;                                        
   fd->num = cur->fd_num;                                         /* File descriptors numbered 0 and 1 are reserved for the console */
   cur->fd_num++;
   list_push_back(&cur->fd_list,&fd->elem);
-  //printf("%s file size:%d\n",file,filesize(fd->num));
+  //printf("%s file size:%d, fdnum:%d\n",file,filesize(fd->num),fd->num);
   return fd->num;
 }
 
@@ -380,9 +391,13 @@ syscall_read(struct intr_frame *f)
   {
     exit(-1);
   }
+  //printf("%s process acquire read\n",thread_current()->name);
   lock_acquire(&file_lock);
+  //printf("%s process acquire read success\n",thread_current()->name);
   f->eax = read(fd,buffer,size);
+  //printf("%s process release read\n",thread_current()->name);
   lock_release(&file_lock);
+  //printf("%s process release read success\n",thread_current()->name);
 }
 
 int 
@@ -420,9 +435,13 @@ syscall_write(struct intr_frame *f)
   {
     exit(-1);
   }
+  //printf("%s process acquire write\n",thread_current()->name);
   lock_acquire(&file_lock);
+  //printf("%s process acquire write success\n",thread_current()->name);
   f->eax = write(fd,buffer,size);
+  //printf("%s process release write\n",thread_current()->name);
   lock_release(&file_lock);
+  //printf("%s process release success\n",thread_current()->name);
 }
 
 int 
@@ -452,14 +471,13 @@ syscall_seek(struct intr_frame *f)
   }
   int fd = *(int*)(f->esp+4);
   unsigned position = *(unsigned*)(f->esp+8);
-  lock_acquire(&file_lock);
   seek(fd,position);
-  lock_release(&file_lock);
 }
 
 void
 seek(int num, unsigned position)
 {
+  //printf("%s seek\n",thread_current()->name);
   struct fd *fd = find_fd_by_num(num);
   if(fd == NULL)
   {
@@ -500,6 +518,7 @@ syscall_close(struct intr_frame *f)
     exit(-1);
   }
   int fd = *(int*)(f->esp+4);
+  //printf("%s close fdnum:%d\n",thread_current()->name,fd);
   lock_acquire(&file_lock);
   close(fd);
   lock_release(&file_lock);
@@ -511,8 +530,10 @@ close(int num)
   struct fd *fd = find_fd_by_num(num);
   if(fd == NULL)
   {
+    //printf("%s no fdnum:%d\n",thread_current()->name,fd);
     exit(-1);
   }
+  //printf("%s close file fdnum:%d\n",thread_current()->name,fd->num);
   file_close(fd->file);
   list_remove(&fd->elem);
   free(fd);

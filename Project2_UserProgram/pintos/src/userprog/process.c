@@ -57,7 +57,7 @@ get_child_by_tid(struct list *waiters,int tid)
 tid_t
 process_execute (const char *file_name) 
 {
-  //printf("%s process_execute\n",file_name);
+  //printf("%d process_execute %s\n",thread_tid(),file_name);
   char *fn_copy;
   tid_t tid;
 
@@ -101,8 +101,9 @@ process_execute (const char *file_name)
   // child->relay_status->tid = tid;
   list_push_back(&parent->child_status,&child->relay_status->elem);
   intr_set_level(old_level);
-  //printf("process sema down\n",thread_current()->name);
+  //printf("parent:%s process sema down\n",thread_current()->name);
   sema_down(&parent->sema);                          /* 阻塞，等待子进程执行完start process*/            
+  //printf("parent:%s wake up now return tid:%d\n",thread_current()->name,tid);
   if(child->relay_status->ret_status == -1)return TID_ERROR;
   return tid; 
 }
@@ -150,7 +151,7 @@ start_process (void *file_name_)
   //printf("start arg passing\n");
   /* 参数传递 */
   char *esp =(char *)if_.esp; // 维护栈顶
-  //printf("%p\ttop stack\n",esp);
+  //printf("%d\ttop stack\n",esp);
   int argv[128]; // 存储的参数地址
   int argc = 0, tokenlen = 0; // argc:参数数量 tokenlen:token长度
   for( ; token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
@@ -158,7 +159,7 @@ start_process (void *file_name_)
     //printf("token:%s tokenlen:%d\n",token,tokenlen);
     esp -= tokenlen; // decrements the stack pointer
     strlcpy(esp, token , tokenlen+1); // right-to-left order
-    //printf("%p\t%s\n",esp,esp);
+    //printf("%d\t%s\n",esp,esp);
     argv[argc++] = (int)esp; 
   }
   while((int)esp % 4!=0){ // word-align
@@ -168,23 +169,25 @@ start_process (void *file_name_)
   int *tmp = (int*)esp; // 接下来存argv地址
   tmp--;
   *tmp = 0; // argv[argc+1]
-  //printf("%p\t%p\n",tmp,*tmp);
+  //printf("%d\t%d\n",tmp,*tmp);
   tmp--; 
   int i;
   for(i=argc-1;i>=0;i--){
     *tmp = argv[i];
-    //printf("%p\t%p\n",tmp,*tmp);
+    //printf("%d\t%d\n",tmp,*tmp);
     tmp--;
   }
   *tmp = (int)(tmp+1); // argv
-  //printf("%p\t%p\n",tmp,*tmp);
+  //printf("%p\targv\t%d\n",tmp,*tmp);
   tmp--;
   *tmp = argc; // argc;
-  //printf("%p\t%d\n",tmp,*tmp);
+  //printf("%p\targc\t%d\n",tmp,*tmp);
   tmp--;
   *tmp = 0; // return address
-  //printf("%p\t%p\n",tmp,*tmp);
+  //printf("%p\treturn address\t%d\n",tmp,*tmp);
   if_.esp = tmp;// 栈更新 
+  
+
   
 
   palloc_free_page (file_name);
@@ -216,15 +219,17 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  //printf("%s process wait %d\n",thread_current()->name,child_tid);
   if(child_tid == TID_ERROR)return -1;            /* TID invalid */
   struct child_process_status *child_status = get_child_status(child_tid);
   if(child_status == NULL)return -1;              /* not child_tid */
-  if(child_status->ret_status == -1)return -1;
   // struct thread* child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
   // if(child==NULL)return child_status->ret_status; 
   //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
-  while(!child_status->finish){
-    //printf("process %s wait\n",thread_current()->name);
+  while(!child_status->finish && child_status->ret_status!=-1)
+  {
+    //printf("process %s wait %d\n",thread_current()->name,child_status->tid);
+    // printf("tid:%d,finish:%d,ret_status:%d\n",child_status->tid,child_status->finish,child_status->ret_status);
     //sema_up(&thread_current()->sema);
     sema_down(&thread_current()->sema);
     //child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
@@ -478,7 +483,15 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  if(success)
+  {
+    t->execfile = file;
+    file_deny_write(file);
+  }
+  else
+  {
+    file_close(file);
+  }
   lock_release(&file_lock);
   return success;
 }

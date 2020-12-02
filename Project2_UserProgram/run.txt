@@ -7,3 +7,17 @@ pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/halt -a halt -- -q  
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/create-empty -a create-empty -- -q  -f run create-empty
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/exec-multiple -a exec-multiple -p tests/userprog/child-simple -a child-simple -- -q  -f run exec-multiple
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/wait-simple -a wait-simple -p tests/userprog/child-simple -a child-simple -- -q  -f run wait-simple 
+pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/multi-child-fd -a multi-child-fd -p ../../tests/userprog/sample.txt -a sample.txt -p tests/userprog/child-close -a child-close -- -q  -f run multi-child-fd
+
+-                24
+-1073741836	argv[0][...]	'read-normal'
+-1073741836	world-align	0
+-1073741840	argv[1]	0
+-1073741844	argv[0]	-1073741836
+-1073741848	argv	-1073741844
+-1073741852	argc	1
+-1073741856	return address	0
+
+mine:	inode:0xc010940c,pose:0,deny_write:0
+inode:0xc010900c,pose:0,deny_write:0
+
