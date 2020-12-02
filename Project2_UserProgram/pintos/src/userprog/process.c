@@ -257,7 +257,7 @@ process_exit (void)
   sema_up(&parent->sema);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
-  close_all_fd();
+  //close_all_fd();
   // 释放当前进程文件资源 关闭该进程的所有fd
   // 释放子进程所有资源
 
