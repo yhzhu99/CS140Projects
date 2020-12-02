@@ -185,7 +185,7 @@ start_process (void *file_name_)
   palloc_free_page (file_name);
 
   //struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
-  //printf("%s process loaded success, sema_up parent %s\n",thread_current()->name,parent->name);
+  ///printf("%s process loaded success, sema_up parent %s\n",thread_current()->name,thread_current()->parent->name);
   sema_up(&thread_current()->parent->sema);
   //sema_down(&parent->sema);
   /* Start the user process by simulating a return from an
@@ -222,7 +222,7 @@ process_wait (tid_t child_tid UNUSED)
   //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
   while(!child_status->finish)
   {
-    //printf("process %s wait %d\n",thread_current()->name,child_status->tid);
+    //printf("process %s wait %d sema down\n",thread_current()->name,child_status->tid);
     // printf("tid:%d,finish:%d,ret_status:%d\n",child_status->tid,child_status->finish,child_status->ret_status);
     //sema_up(&thread_current()->sema);
     sema_down(&thread_current()->sema);
