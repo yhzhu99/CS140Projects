@@ -61,6 +61,7 @@ void close(int);
 
 struct fd* find_fd_by_num(int);
 bool pointer_valid(void *,int);
+void close_all_fd(void);
 
 /* file descriptor */
 struct fd{
@@ -246,6 +247,7 @@ exec(const char* cmd_line)
 void 
 syscall_wait(struct intr_frame *f)
 {
+  //printf("%s syscall wait\n",thread_current()->name);
    if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);

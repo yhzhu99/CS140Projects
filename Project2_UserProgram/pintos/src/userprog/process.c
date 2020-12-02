@@ -101,8 +101,9 @@ process_execute (const char *file_name)
   child->relay_status->tid = tid;
   list_push_back(&parent->child_status,&child->relay_status->elem);
   intr_set_level(old_level);
-  //printf("process sema down\n",thread_current()->name);
-  sema_down(&parent->sema);                          /* 阻塞，等待子进程执行完start process*/            
+  //printf("%s process sema down\n",thread_current()->name);
+  sema_down(&parent->sema);                          /* 阻塞，等待子进程执行完start process*/
+  //printf("%s wake up,start return %d\n",thread_current()->name,tid);
   return tid; 
 }
 
@@ -191,6 +192,7 @@ start_process (void *file_name_)
   struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
   //printf("%s process loaded success, sema_up parent %s\n",thread_current()->name,parent->name);
   sema_up(&parent->sema);
+  //printf("%s process semadown parent %s\n",thread_current()->name,parent->name);
   sema_down(&parent->sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -198,6 +200,7 @@ start_process (void *file_name_)
      arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
+  //printf("%s release %s wake up ,asm\n",parent->name,thread_current()->name);
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
 }
@@ -215,6 +218,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  //printf("%s wait process tid:%d\n",thread_current()->name, child_tid);
   if(child_tid == TID_ERROR)return -1;            /* TID invalid */
   struct child_process_status *child_status = get_child_status(child_tid);
   if(child_status == NULL)return -1;              /* not child_tid */
@@ -234,10 +238,10 @@ process_wait (tid_t child_tid UNUSED)
     printf("what the fuck?\n");
     return -1;
   }
-  int res = child_status->ret_status;
+  int ret = child_status->ret_status;
   list_remove(&child_status->elem);
   free(child_status);
-  return res;
+  return child_status->ret_status;
 }
 
 /* Free the current process's resources. */
@@ -253,7 +257,7 @@ process_exit (void)
   sema_up(&parent->sema);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
-  close_all_fd();
+  //close_all_fd();
   // 释放当前进程文件资源 关闭该进程的所有fd
   // 释放子进程所有资源
 
