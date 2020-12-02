@@ -247,7 +247,6 @@ exec(const char* cmd_line)
 void 
 syscall_wait(struct intr_frame *f)
 {
-  //printf("%s syscall wait\n",thread_current()->name);
    if(!pointer_valid(f->esp+4,1))
   {
     exit(-1);
@@ -515,7 +514,5 @@ close(int num)
     exit(-1);
   }
   list_remove(&fd->elem);
-  lock_acquire(&file_lock);
   file_close(fd->file);
-  lock_release(&file_lock);
 }
