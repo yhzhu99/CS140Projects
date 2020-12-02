@@ -51,11 +51,11 @@ process_execute (const char *file_name)
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page(0);
+  fn_copy = malloc(strlen(file_name)+1);
   //printf("malloc fncopy success\n");
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
+  strlcpy (fn_copy, file_name, strlen(file_name)+1);
   
   /* Make a copy of FILE_NAME.
      Otherwise there's a page fault*/
@@ -72,7 +72,7 @@ process_execute (const char *file_name)
   //printf("thread_created\n");
   free(token);
   if (tid == TID_ERROR){
-    palloc_free_page (fn_copy); 
+    free(fn_copy); 
     return tid;
   }
 
@@ -182,7 +182,7 @@ start_process (void *file_name_)
 
   
 
-  palloc_free_page (file_name);
+  free(file_name);
 
   //struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
   ///printf("%s process loaded success, sema_up parent %s\n",thread_current()->name,thread_current()->parent->name);

@@ -64,6 +64,8 @@ struct fd* find_fd_by_num(int);
 bool pointer_valid(void *,int);
 void close_all_fd(void);
 
+
+int fd_num = 2;                         /* fd的编号,从2开始,只增不减 */
 /* file descriptor */
 struct fd{
     int num;
@@ -341,7 +343,7 @@ open(const char* file)
 {
   struct file *f = filesys_open(file);
   //sysout_file_info(f);
-  printf("filesize:%d\n",file_length(f));
+  //printf("filesize:%d\n",file_length(f));
   if(f == NULL)
   {
     return -1;                                /* open failed */
@@ -354,8 +356,8 @@ open(const char* file)
   }
   struct thread *cur = thread_current();
   fd->file = f;                                        
-  fd->num = cur->fd_num;                                         /* File descriptors numbered 0 and 1 are reserved for the console */
-  cur->fd_num++;
+  fd->num = fd_num;                                         /* File descriptors numbered 0 and 1 are reserved for the console */
+  fd_num++;
   list_push_back(&cur->fd_list,&fd->elem);
   //printf("%s file size:%d, fdnum:%d\n",file,filesize(fd->num),fd->num);
   return fd->num;

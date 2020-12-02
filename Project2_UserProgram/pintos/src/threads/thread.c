@@ -503,7 +503,6 @@ init_thread (struct thread *t, const char *name, int priority)
 
   sema_init(&t->sema, 0);                 /* 初始化信号量 */
   list_init(&t->fd_list);                 /* 初始化拥有的file descriptor */
-  t->fd_num = 2;                          /* 0 和 1 为console拥有 */
   list_init(&t->child_status);            /* 初始化子进程状态列表 */
 
   old_level = intr_disable ();

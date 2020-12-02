@@ -113,7 +113,6 @@ struct thread
     struct semaphore sema;              /* 子进程将会在该信号量上等待 */
     struct thread *parent;              /* 父进程 */
     struct list fd_list;                /* 拥有的file descriptor */
-    int fd_num;                         /* fd的编号,从2开始,只增不减 */
     struct list child_status;           /* 子进程状态列表，使得子进程结束后父进程也能获得子进程的状态 */  
     struct child_process_status *relay_status;
     struct file *execfile; 
