@@ -513,6 +513,7 @@ close(int num)
   {
     exit(-1);
   }
-  list_remove(&fd->elem);
   file_close(fd->file);
+  list_remove(&fd->elem);
+  free(fd);
 }

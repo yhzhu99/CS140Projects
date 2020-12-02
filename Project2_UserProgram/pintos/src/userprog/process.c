@@ -224,6 +224,7 @@ process_wait (tid_t child_tid UNUSED)
   //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
   while(child!=NULL){
     //printf("process %s wait %s\n",thread_current()->name,child->name);
+    sema_up(&thread_current()->sema);
     sema_down(&thread_current()->sema);
     child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
   }
@@ -233,6 +234,9 @@ process_wait (tid_t child_tid UNUSED)
     printf("what the fuck?\n");
     return -1;
   }
+  int res = child_status->ret_status;
+  list_remove(&child_status->elem);
+  free(child_status);
   return child_status->ret_status;
 }
 
