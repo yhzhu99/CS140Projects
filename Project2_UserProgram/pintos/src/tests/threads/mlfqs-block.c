@@ -32,8 +32,8 @@ test_mlfqs_block (void)
   lock_acquire (&lock);
   
   msg ("Main thread creating block thread, sleeping 25 seconds...");
-  thread_create ("block", PRI_DEFAULT, block_thread, &lock);
-  timer_sleep (25 * TIMER_FREQ);
+  thread_create ("block", PRI_DEFAULT, block_thread, &lock);// 先创建一个新线程
+  timer_sleep (25 * TIMER_FREQ);// 主线程带着锁休眠
 
   msg ("Main thread spinning for 5 seconds...");
   start_time = timer_ticks ();

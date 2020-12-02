@@ -120,11 +120,11 @@ test_mlfqs_load_60 (void)
 
   start_time = timer_ticks ();
   msg ("Starting %d niced load threads...", THREAD_CNT);
-  for (i = 0; i < THREAD_CNT; i++) 
+  for (i = 0; i < THREAD_CNT; i++) // 连续启动60个线程
     {
       char name[16];
       snprintf(name, sizeof name, "load %d", i);
-      thread_create (name, PRI_DEFAULT, load_thread, NULL);
+      thread_create (name, PRI_DEFAULT, load_thread, NULL);// 启动一个新线程，每个线程执行load_thread()
     }
   msg ("Starting threads took %d seconds.",
        timer_elapsed (start_time) / TIMER_FREQ);
@@ -133,23 +133,23 @@ test_mlfqs_load_60 (void)
     {
       int64_t sleep_until = start_time + TIMER_FREQ * (2 * i + 10);
       int load_avg;
-      timer_sleep (sleep_until - timer_ticks ());
+      timer_sleep (sleep_until - timer_ticks ());// 主线程2秒休眠一次
       load_avg = thread_get_load_avg ();
       msg ("After %d seconds, load average=%d.%02d.",
-           i * 2, load_avg / 100, load_avg % 100);
+           i * 2, load_avg / 100, load_avg % 100);// 每2秒打印一次系统的load average
     }
 }
 
 static void
-load_thread (void *aux UNUSED) 
+load_thread (void *aux UNUSED) // 描述了单个线程的行为
 {
   int64_t sleep_time = 10 * TIMER_FREQ;
   int64_t spin_time = sleep_time + 60 * TIMER_FREQ;
   int64_t exit_time = spin_time + 60 * TIMER_FREQ;
 
   thread_set_nice (20);
-  timer_sleep (sleep_time - timer_elapsed (start_time));
-  while (timer_elapsed (start_time) < spin_time)
+  timer_sleep (sleep_time - timer_elapsed (start_time));// 先休眠10秒
+  while (timer_elapsed (start_time) < spin_time) // 然后进入busy状态，持续60秒
     continue;
-  timer_sleep (exit_time - timer_elapsed (start_time));
+  timer_sleep (exit_time - timer_elapsed (start_time));// 再休眠10秒
 }

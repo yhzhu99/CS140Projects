@@ -18,14 +18,14 @@ void
 test_mlfqs_load_1 (void) 
 {
   int64_t start_time;
-  int elapsed;
+  int elapsed;//线程消耗的时间
   int load_avg;
   
   ASSERT (thread_mlfqs);
 
   msg ("spinning for up to 45 seconds, please wait...");
 
-  start_time = timer_ticks ();
+  start_time = timer_ticks ();//开始计时
   for (;;) 
     {
       load_avg = thread_get_load_avg ();
@@ -36,7 +36,7 @@ test_mlfqs_load_1 (void)
               "but should be between 0 and 1 (after %d seconds)",
               load_avg / 100, load_avg % 100, elapsed);
       else if (load_avg > 50)
-        break;
+        break;//满足条件，跳出循环
       else if (elapsed > 45)
         fail ("load average stayed below 0.5 for more than 45 seconds");
     }

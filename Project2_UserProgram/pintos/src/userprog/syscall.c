@@ -341,7 +341,7 @@ open(const char* file)
 {
   struct file *f = filesys_open(file);
   //sysout_file_info(f);
-  //printf("filesize:%d\n",file_length(f));
+  printf("filesize:%d\n",file_length(f));
   if(f == NULL)
   {
     return -1;                                /* open failed */

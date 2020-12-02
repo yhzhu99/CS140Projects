@@ -119,7 +119,7 @@ test_mlfqs_recent_1 (void)
       msg ("Sleeping 10 seconds to allow recent_cpu to decay, please wait...");
       start_time = timer_ticks ();
       timer_sleep (DIV_ROUND_UP (start_time, TIMER_FREQ) - start_time
-                   + 10 * TIMER_FREQ);
+                   + 10 * TIMER_FREQ);// 休眠10秒，让recent_cpu值降到7.00以下
     }
   while (thread_get_recent_cpu () > 700);
 
@@ -127,7 +127,7 @@ test_mlfqs_recent_1 (void)
   for (;;) 
     {
       int elapsed = timer_elapsed (start_time);
-      if (elapsed % (TIMER_FREQ * 2) == 0 && elapsed > last_elapsed) 
+      if (elapsed % (TIMER_FREQ * 2) == 0 && elapsed > last_elapsed) // 每2秒打印一次
         {
           int recent_cpu = thread_get_recent_cpu ();
           int load_avg = thread_get_load_avg ();
@@ -136,7 +136,7 @@ test_mlfqs_recent_1 (void)
                elapsed_seconds,
                recent_cpu / 100, recent_cpu % 100,
                load_avg / 100, load_avg % 100);
-          if (elapsed_seconds >= 180)
+          if (elapsed_seconds >= 180)// 主线程运行180秒后退出
             break;
         } 
       last_elapsed = elapsed;

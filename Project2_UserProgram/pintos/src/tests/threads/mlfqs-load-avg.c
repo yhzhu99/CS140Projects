@@ -139,7 +139,7 @@ test_mlfqs_load_avg (void)
     }
   msg ("Starting threads took %d seconds.",
        timer_elapsed (start_time) / TIMER_FREQ);
-  thread_set_nice (-20);
+  thread_set_nice (-20);// 设置主线程nice值为-20
 
   for (i = 0; i < 90; i++) 
     {
@@ -148,20 +148,21 @@ test_mlfqs_load_avg (void)
       timer_sleep (sleep_until - timer_ticks ());
       load_avg = thread_get_load_avg ();
       msg ("After %d seconds, load average=%d.%02d.",
-           i * 2, load_avg / 100, load_avg % 100);
+           i * 2, load_avg / 100, load_avg % 100);// 主线程每2秒打印一次
     }
 }
 
 static void
 load_thread (void *seq_no_) 
 {
-  int seq_no = (int) seq_no_;
-  int sleep_time = TIMER_FREQ * (10 + seq_no);
-  int spin_time = sleep_time + TIMER_FREQ * THREAD_CNT;
-  int exit_time = TIMER_FREQ * (THREAD_CNT * 2);
+  int seq_no = (int) seq_no_;// 第i个线程
+  int sleep_time = TIMER_FREQ * (10 + seq_no);// 睡眠10+i秒
+  int spin_time = sleep_time + TIMER_FREQ * THREAD_CNT;// 工作60秒
+  int exit_time = TIMER_FREQ * (THREAD_CNT * 2);// 第120秒所有线程退出
 
-  timer_sleep (sleep_time - timer_elapsed (start_time));
-  while (timer_elapsed (start_time) < spin_time)
+  // 这里没有对新线程的nice值进行设置
+  timer_sleep (sleep_time - timer_elapsed (start_time));// 睡眠
+  while (timer_elapsed (start_time) < spin_time)// 工作
     continue;
-  timer_sleep (exit_time - timer_elapsed (start_time));
+  timer_sleep (exit_time - timer_elapsed (start_time));// 睡眠直到退出
 }

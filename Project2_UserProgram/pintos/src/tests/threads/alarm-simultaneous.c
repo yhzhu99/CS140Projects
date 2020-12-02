@@ -52,6 +52,7 @@ test_sleep (int thread_cnt, int iterations)
   test.start = timer_ticks () + 100;
   test.iterations = iterations;
   test.output_pos = output;
+
   /* Start threads. */
   ASSERT (output != NULL);
   for (i = 0; i < thread_cnt; i++)
@@ -60,6 +61,7 @@ test_sleep (int thread_cnt, int iterations)
       snprintf (name, sizeof name, "thread %d", i);
       thread_create (name, PRI_DEFAULT, sleeper, &test);
     }
+  
   /* Wait long enough for all the threads to finish. */
   timer_sleep (100 + iterations * 10 + 100);
 

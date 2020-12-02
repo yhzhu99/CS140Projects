@@ -53,11 +53,11 @@ test_mlfqs_nice_10 (void)
 
 #define MAX_THREAD_CNT 20
 
-struct thread_info 
+struct thread_info // 这是记录单个线程拥有的信息的
   {
-    int64_t start_time;
+    int64_t start_time;// 可以认为是创建时间？
     int tick_count;
-    int nice;
+    int nice;// nice系数为负，值大的分到cpu反而少
   };
 
 static void load_thread (void *aux);
@@ -76,7 +76,7 @@ test_mlfqs_fair (int thread_cnt, int nice_min, int nice_step)
   ASSERT (nice_step >= 0);
   ASSERT (nice_min + nice_step * (thread_cnt - 1) <= 20);
 
-  thread_set_nice (-20);
+  thread_set_nice (-20);// 设置主线程的nice值为-20
 
   start_time = timer_ticks ();
   msg ("Starting %d threads...", thread_cnt);
@@ -86,19 +86,19 @@ test_mlfqs_fair (int thread_cnt, int nice_min, int nice_step)
       struct thread_info *ti = &info[i];
       char name[16];
 
-      ti->start_time = start_time;
+      ti->start_time = start_time;// 初始化时间，可以认为是创建时间？
       ti->tick_count = 0;
       ti->nice = nice;
 
       snprintf(name, sizeof name, "load %d", i);
-      thread_create (name, PRI_DEFAULT, load_thread, ti);
+      thread_create (name, PRI_DEFAULT, load_thread, ti);// 此时这个新线程被创建
 
-      nice += nice_step;
+      nice += nice_step;// 下一个线程的nice比上一个高step
     }
   msg ("Starting threads took %"PRId64" ticks.", timer_elapsed (start_time));
 
   msg ("Sleeping 40 seconds to let threads run, please wait...");
-  timer_sleep (40 * TIMER_FREQ);
+  timer_sleep (40 * TIMER_FREQ);// 主线程休眠，不计入run_threads
   
   for (i = 0; i < thread_cnt; i++)
     msg ("Thread %d received %d ticks.", i, info[i].tick_count);
@@ -114,11 +114,11 @@ load_thread (void *ti_)
 
   thread_set_nice (ti->nice);
   timer_sleep (sleep_time - timer_elapsed (ti->start_time));
-  while (timer_elapsed (ti->start_time) < spin_time) 
+  while (timer_elapsed (ti->start_time) < spin_time) // 注意到这是用一个while循环来计数的
     {
       int64_t cur_time = timer_ticks ();
       if (cur_time != last_time)
-        ti->tick_count++;
+        ti->tick_count++;// 在这里增加线程的时间片计数
       last_time = cur_time;
     }
 }
