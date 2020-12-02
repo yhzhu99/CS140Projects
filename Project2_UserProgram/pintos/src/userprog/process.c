@@ -37,18 +37,6 @@ get_child_status(int tid)
   return NULL;
 }
 
-struct thread *
-get_child_by_tid(struct list *waiters,int tid)
-{
-  struct list_elem *e;
-  struct thread * child = NULL;
-  for (e = list_begin (waiters); e != list_end (waiters); e = e->prev)
-  {
-    child = list_entry (e, struct thread, elem);
-    if(child->tid == tid)return child;
-  }
-  return NULL;
-}
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -93,16 +81,15 @@ process_execute (const char *file_name)
   //printf("thread_created success\n");
   enum intr_level old_level;
   old_level = intr_disable ();
-  struct thread *parent = thread_current();          /* 当前进程就是父进程 */
   struct thread *child = get_thread_by_tid(tid);     /* 根据tid找到子进程 */
-  child->parent_tid = parent->tid;                   /* 更新parent_id */
+  child->parent = thread_current();                   /* 更新parent_id */
   // struct child_process_status* relay_status = malloc(sizeof(struct child_process_status));
   // child->relay_status = relay_status;
   // child->relay_status->tid = tid;
-  list_push_back(&parent->child_status,&child->relay_status->elem);
+  list_push_back(&child->parent->child_status,&child->relay_status->elem);
   intr_set_level(old_level);
   //printf("parent:%s process sema down\n",thread_current()->name);
-  sema_down(&parent->sema);                          /* 阻塞，等待子进程执行完start process*/            
+  sema_down(&child->parent->sema);                          /* 阻塞，等待子进程执行完start process*/            
   //printf("parent:%s wake up now return tid:%d\n",thread_current()->name,tid);
   if(child->relay_status->ret_status == -1)return TID_ERROR;
   return tid; 
@@ -139,10 +126,10 @@ start_process (void *file_name_)
     /* If load failed, quit. */
   if (!success)
   {
-    struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
+    //struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
     thread_current()->relay_status->ret_status = -1;
     //printf("%s process loaded failed, sema_up parent %s\n",thread_current()->name,parent->name);
-    sema_up(&parent->sema);
+    sema_up(&thread_current()->parent->sema);
     exit(-1);
   }
      
@@ -192,9 +179,9 @@ start_process (void *file_name_)
 
   palloc_free_page (file_name);
 
-  struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
+  //struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
   //printf("%s process loaded success, sema_up parent %s\n",thread_current()->name,parent->name);
-  sema_up(&parent->sema);
+  sema_up(&thread_current()->parent->sema);
   //sema_down(&parent->sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -252,12 +239,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-  cur->relay_status->finish = true;
-  cur->relay_status->ret_status = cur->ret;
-  printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
-  struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
-  //printf("%s exit, semaup parent %s\n",thread_current()->name,parent->name);
-  sema_up(&parent->sema);
+  
   
 
 

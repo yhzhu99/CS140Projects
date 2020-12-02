@@ -315,6 +315,13 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
+  struct thread *cur = thread_current();
+  cur->relay_status->finish = true;
+  cur->relay_status->ret_status = cur->ret;
+  printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
+  //struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
+  //printf("%s exit, semaup parent %s\n",thread_current()->name,parent->name);
+  sema_up(&cur->parent->sema);
   intr_disable ();
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
