@@ -117,10 +117,10 @@ close_all_fd()
 {
   struct list_elem *e;
   struct thread *cur = thread_current ();
-  while (!list_empty (&cur->fd_list))
+  while (!list_empty(&cur->fd_list))
   {
-    e = list_begin (&cur->fd_list);
-    close (list_entry (e, struct fd, elem)->num);
+    e = list_begin(&cur->fd_list);
+    close(list_entry(e, struct fd, elem)->num);
   }
   file_close(cur->execfile);
 }
@@ -495,7 +495,9 @@ seek(int num, unsigned position)
   {
     exit(-1);
   }
-  file_seek(fd->file,position); 
+  lock_acquire(&file_lock);
+  file_seek(fd->file,position);
+  lock_release(&file_lock); 
 }
 
 void

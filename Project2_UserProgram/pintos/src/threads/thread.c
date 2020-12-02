@@ -190,7 +190,6 @@ thread_create (const char *name, int priority,
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
-  struct child_process_status *rs;
   tid_t tid;
 
   ASSERT (function != NULL);
@@ -322,10 +321,15 @@ thread_exit (void)
   cur->relay_status->finish = true;
   cur->relay_status->ret_status = cur->ret;
   printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
-  //struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
-  //printf("%s exit, semaup parent %s\n",thread_current()->name,parent->name);
+
   sema_up(&cur->parent->sema);
+
   intr_disable ();
+  while(!list_empty(&cur->child_status))
+  {
+    struct child_process_status *child_status= list_entry(list_pop_front(&cur->child_status),struct child_process_status, elem);
+    free(child_status);
+  }
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
   schedule ();

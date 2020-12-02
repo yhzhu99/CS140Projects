@@ -45,27 +45,34 @@ get_child_status(int tid)
 tid_t
 process_execute (const char *file_name) 
 {
+  printf("%d execute %s\n",thread_current()->tid,file_name);
   char *fn_copy;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = malloc(strlen(file_name)+1);
-  if (fn_copy == NULL)
-    return TID_ERROR;
+  if (fn_copy == NULL)return TID_ERROR;
   strlcpy (fn_copy, file_name, strlen(file_name)+1);
   
   /* Make a copy of FILE_NAME.
      Otherwise there's a page fault*/
   char *token = malloc(strlen(file_name)+1);
-  if(token == NULL)return TID_ERROR;
+  if(token == NULL)
+  {
+    free(fn_copy);
+    return TID_ERROR;
+  }
   strlcpy (token,file_name, strlen(file_name)+1);
-  char *save_ptr = NULL;
-  token = strtok_r(token," ",&save_ptr);
+
+
 
   /* Create a new thread to execute FILE_NAME. */
+  char *save_ptr = NULL;
+  token = strtok_r(token," ",&save_ptr);
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
   free(token);
+
   if (tid == TID_ERROR){
     free(fn_copy); 
     return tid;
@@ -73,12 +80,15 @@ process_execute (const char *file_name)
 
 
   /* 创建成功 */
+  printf("%d sema_down, create %d\n",thread_current()->tid,tid);
   sema_down(&thread_current()->sema);                          /* 阻塞，等待子进程执行完loaded */            
   struct child_process_status *child_status = get_child_status(tid);
   if(child_status->finish)                              /* 子进程已经执行完毕 */
   {
+    printf("%d wake up,child %d has finished,ret_status:%d\n",thread_current()->tid,tid,child_status->ret_status);
     return child_status->ret_status;
   }
+  printf("%d wake up,%d is still running, return tid:%d\n",thread_current()->tid,tid,tid);
   return tid; 
 }
 
@@ -88,7 +98,9 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
+  
   char *file_name = file_name_;
+  printf("tid:%d , name:%s , start process\n",thread_current()->tid,file_name,file_name);
   struct intr_frame if_;
   bool success;
 
@@ -112,6 +124,7 @@ start_process (void *file_name_)
   if (!success)
   {
     thread_current()->relay_status->ret_status = -1;
+    printf("%d load failed , sema up parent tid:%d\n",thread_current()->tid,thread_current()->parent->tid);
     sema_up(&thread_current()->parent->sema);
     exit(-1);
   }
@@ -150,6 +163,7 @@ start_process (void *file_name_)
   
 
   free(file_name);
+  printf("%d load success, sema up parent tid:%d\n",thread_current()->tid,thread_current()->parent->tid);
   sema_up(&thread_current()->parent->sema);
 
   /* Start the user process by simulating a return from an
@@ -175,15 +189,30 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  if(child_tid == TID_ERROR)return -1;            /* TID invalid */
+  printf("%d process wait %d\n",thread_current()->tid,child_tid);
+  if(child_tid == TID_ERROR)
+  {
+    printf("%d TID invalid\n",child_tid);
+    return -1;            /* TID invalid */
+  }
   struct child_process_status *child_status = get_child_status(child_tid);
-  if(child_status == NULL)return -1;              /* not child_tid */
-  if(child_status->iswaited)return -1;
+  if(child_status == NULL)
+  {
+    printf("%d No child_status\n",child_tid);
+    return -1;              /* not child_tid */
+  }
+  if(child_status->iswaited)
+  {
+    printf("%d Is being waited\n",child_tid);
+    return -1;
+  }
   child_status->iswaited = true;
   while(!child_status->finish)
   {
+    printf("%d sema down , waits for %d\n",thread_current()->tid,child_tid);
     sema_down(&thread_current()->sema);
   }
+  printf("%d wait over , now free child_status->tid:%d\n",thread_current()->tid,child_tid);
   int res = child_status->ret_status;
   list_remove(&child_status->elem);
   free(child_status);
