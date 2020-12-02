@@ -108,7 +108,7 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
     int ret;                            /* exit status */  
     struct semaphore sema;              /* 子进程将会在该信号量上等待 */
-    tid_t parent_tid;                   /* 父进程的tid */
+    struct thread *parent;              /* 父进程地址 */
     struct list fd_list;                /* 拥有的file descriptor */
     int fd_num;                         /* fd的编号,从2开始,只增不减 */
     struct list child_status;           /* 子进程状态列表，使得子进程结束后父进程也能获得子进程的状态 */  

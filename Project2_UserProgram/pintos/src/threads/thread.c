@@ -186,11 +186,11 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 
 {
+
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
-  struct child_process_status *rs;
   tid_t tid;
 
   ASSERT (function != NULL);
@@ -203,11 +203,19 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-
   /* 初始化child_process_status */
   t->relay_status = malloc(sizeof(struct child_process_status));
+  //printf("%p,relay status\n",t->relay_status);
   t->relay_status->tid = tid;
   t->relay_status->finish = false;
+  t->relay_status->ret_status = 0;
+  t->parent = thread_current(); 
+  //printf("%p parent\n",t->parent);
+  enum intr_level old_level;
+  intr_disable();
+  list_push_back(&thread_current()->child_status,&t->relay_status->elem);
+  intr_set_level(old_level);
+
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -311,6 +319,13 @@ thread_exit (void)
 #ifdef USERPROG
   process_exit ();
 #endif
+  struct thread *cur = thread_current();
+  cur->relay_status->finish = true;
+  cur->relay_status->ret_status = cur->ret;
+  printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
+  //printf("%s exit, semaup parent %s\n",thread_current()->name,parent->name);
+  sema_up(&thread_current()->parent->sema);
+  //printf("schedule\n");
 
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
@@ -495,6 +510,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->fd_list);                 /* 初始化拥有的file descriptor */
   t->fd_num = 2;                          /* 0 和 1 为console拥有 */
   list_init(&t->child_status);            /* 初始化子进程状态列表 */
+  t->execfile = NULL;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

@@ -278,9 +278,9 @@ syscall_create(struct intr_frame *f)
     exit(-1);
   }
   unsigned initial_size = *(int *)(f->esp+8);
-  lock_acquire(&file_lock);
+  //lock_acquire(&file_lock);
   f->eax = create(file,initial_size);
-  lock_release(&file_lock);
+  //lock_release(&file_lock);
 }
 
 bool 
@@ -302,9 +302,9 @@ syscall_remove(struct intr_frame *f)
   {
     exit(-1);
   }
-  lock_acquire(&file_lock);
+  //lock_acquire(&file_lock);
   f->eax = remove(file);
-  lock_release(&file_lock);
+  //lock_release(&file_lock);
 }
 
 bool 
@@ -326,9 +326,9 @@ syscall_open(struct intr_frame *f)
     exit(-1);
   }
   //printf("%d %s open file %s\n",thread_tid(),thread_current()->name,file);
-  lock_acquire(&file_lock);
+  //lock_acquire(&file_lock);
   f->eax = open(file);
-  lock_release(&file_lock);
+  //lock_release(&file_lock);
 }
 
 int 
@@ -361,9 +361,9 @@ syscall_filesize(struct intr_frame *f)
     exit(-1);
   }
   int fd = *(int*)(f->esp+4);
-  lock_acquire(&file_lock);
+  //lock_acquire(&file_lock);
   f->eax = filesize(fd);
-  lock_release(&file_lock);
+  //lock_release(&file_lock);
 }
 
 int 
@@ -392,11 +392,11 @@ syscall_read(struct intr_frame *f)
     exit(-1);
   }
   //printf("%s process acquire read\n",thread_current()->name);
-  lock_acquire(&file_lock);
+  //lock_acquire(&file_lock);
   //printf("%s process acquire read success\n",thread_current()->name);
   f->eax = read(fd,buffer,size);
   //printf("%s process release read\n",thread_current()->name);
-  lock_release(&file_lock);
+  //lock_release(&file_lock);
   //printf("%s process release read success\n",thread_current()->name);
 }
 
@@ -436,11 +436,11 @@ syscall_write(struct intr_frame *f)
     exit(-1);
   }
   //printf("%s process acquire write\n",thread_current()->name);
-  lock_acquire(&file_lock);
+  //lock_acquire(&file_lock);
   //printf("%s process acquire write success\n",thread_current()->name);
   f->eax = write(fd,buffer,size);
   //printf("%s process release write\n",thread_current()->name);
-  lock_release(&file_lock);
+  //lock_release(&file_lock);
   //printf("%s process release success\n",thread_current()->name);
 }
 
@@ -494,9 +494,9 @@ syscall_tell(struct intr_frame *f)
     exit(-1);
   }
   int td = *(int*)(f->esp+4);
-  lock_acquire(&file_lock);
+  //lock_acquire(&file_lock);
   f->eax = tell(td);
-  lock_release(&file_lock);
+  //lock_release(&file_lock);
 }
 
 unsigned
@@ -519,9 +519,9 @@ syscall_close(struct intr_frame *f)
   }
   int fd = *(int*)(f->esp+4);
   //printf("%s close fdnum:%d\n",thread_current()->name,fd);
-  lock_acquire(&file_lock);
+  //lock_acquire(&file_lock);
   close(fd);
-  lock_release(&file_lock);
+  //lock_release(&file_lock);
 }
 
 void
