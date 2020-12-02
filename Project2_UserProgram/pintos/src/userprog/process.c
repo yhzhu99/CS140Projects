@@ -67,7 +67,7 @@ process_execute (const char *file_name)
   //printf("malloc fncopy success\n");
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, strlen(file_name)+1);
+  strlcpy (fn_copy, file_name, PGSIZE);
   
   /* Make a copy of FILE_NAME.
      Otherwise there's a page fault*/
@@ -96,13 +96,14 @@ process_execute (const char *file_name)
   struct thread *parent = thread_current();          /* 当前进程就是父进程 */
   struct thread *child = get_thread_by_tid(tid);     /* 根据tid找到子进程 */
   child->parent_tid = parent->tid;                   /* 更新parent_id */
-  struct child_process_status* relay_status = malloc(sizeof(struct child_process_status));
-  child->relay_status = relay_status;
-  child->relay_status->tid = tid;
+  // struct child_process_status* relay_status = malloc(sizeof(struct child_process_status));
+  // child->relay_status = relay_status;
+  // child->relay_status->tid = tid;
   list_push_back(&parent->child_status,&child->relay_status->elem);
   intr_set_level(old_level);
   //printf("process sema down\n",thread_current()->name);
   sema_down(&parent->sema);                          /* 阻塞，等待子进程执行完start process*/            
+  if(child->relay_status->ret_status == -1)return TID_ERROR;
   return tid; 
 }
 
@@ -113,7 +114,7 @@ static void
 start_process (void *file_name_)
 {
   char *file_name = file_name_;
-  //printf("%s process start\n",file_name_);
+  //printf("%d %s process start\n",thread_tid(),file_name_);
   struct intr_frame if_;
   bool success;
 
@@ -191,7 +192,7 @@ start_process (void *file_name_)
   struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
   //printf("%s process loaded success, sema_up parent %s\n",thread_current()->name,parent->name);
   sema_up(&parent->sema);
-  sema_down(&parent->sema);
+  //sema_down(&parent->sema);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -219,25 +220,25 @@ process_wait (tid_t child_tid UNUSED)
   struct child_process_status *child_status = get_child_status(child_tid);
   if(child_status == NULL)return -1;              /* not child_tid */
   if(child_status->ret_status == -1)return -1;
-  struct thread* child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
-  if(child==NULL)return child_status->ret_status; 
+  // struct thread* child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
+  // if(child==NULL)return child_status->ret_status; 
   //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
-  while(child!=NULL){
-    //printf("process %s wait %s\n",thread_current()->name,child->name);
-    sema_up(&thread_current()->sema);
+  while(!child_status->finish){
+    //printf("process %s wait\n",thread_current()->name);
+    //sema_up(&thread_current()->sema);
     sema_down(&thread_current()->sema);
-    child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
+    //child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
   }
-  child_status = get_child_status(child_tid);
-  if(child_status == NULL)
-  {
-    printf("what the fuck?\n");
-    return -1;
-  }
+  // child_status = get_child_status(child_tid);
+  // if(child_status == NULL)
+  // {
+  //   printf("what the fuck?\n");
+  //   return -1;
+  // }
   int res = child_status->ret_status;
   list_remove(&child_status->elem);
   free(child_status);
-  return child_status->ret_status;
+  return res;
 }
 
 /* Free the current process's resources. */
@@ -246,18 +247,21 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-  printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
+  cur->relay_status->finish = true;
   cur->relay_status->ret_status = cur->ret;
+  printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
   struct thread *parent = get_thread_by_tid(thread_current()->parent_tid);
   //printf("%s exit, semaup parent %s\n",thread_current()->name,parent->name);
   sema_up(&parent->sema);
-  /* Destroy the current process's page directory and switch back
-     to the kernel-only page directory. */
+  
+
 
   // 释放当前进程文件资源 关闭该进程的所有fd
   // 释放子进程所有资源
 
-  
+  /* Destroy the current process's page directory and switch back
+    to the kernel-only page directory. */
+
   pd = cur->pagedir;
   if (pd != NULL) 
     {

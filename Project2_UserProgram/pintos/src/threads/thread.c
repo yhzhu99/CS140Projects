@@ -190,6 +190,7 @@ thread_create (const char *name, int priority,
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
+  struct child_process_status *rs;
   tid_t tid;
 
   ASSERT (function != NULL);
@@ -202,6 +203,11 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+
+  /* 初始化child_process_status */
+  t->relay_status = malloc(sizeof(struct child_process_status));
+  t->relay_status->tid = tid;
+  t->relay_status->finish = false;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);

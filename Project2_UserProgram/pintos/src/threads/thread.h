@@ -24,6 +24,17 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+
+struct child_process_status         /* 该进程作为子进程的状态 */
+{
+   int tid;                         /* 子进程编号 */
+   int ret_status;                   
+   /* 如果为-1表示异常退出,子进程可能以及结束,父进程直接认为该子进程返回状态为-1 
+      其他情况下,需要判断子进程是否已经运行结束,那么该ret_status就是子进程的返回值. */
+   bool finish;                     /* 子进程是否运行结束 */
+   struct list_elem elem;           /* elem for child_status */
+};
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -106,15 +117,6 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
-
-struct child_process_status         /* 该进程作为子进程的状态 */
-{
-   int tid;                          /* 子进程编号 */
-   int ret_status;                   
-   /* 如果为-1表示异常退出,子进程可能以及结束,父进程直接认为该子进程返回状态为-1 
-      其他情况下,需要判断子进程是否不在信号量上,如果不在表示已经推出,那么该ret_status就是子进程的返回值. */
-   struct list_elem elem;            /* elem for child_status */
-};
 
 
 /* If false (default), use round-robin scheduler.

@@ -5,3 +5,5 @@ pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/exec-arg -a exec-arg
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/exec-bound-3 -a exec-bound-3 -- -q  -f run exec-bound-3
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/halt -a halt -- -q  -f run halt
 pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/create-empty -a create-empty -- -q  -f run create-empty
+pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/exec-multiple -a exec-multiple -p tests/userprog/child-simple -a child-simple -- -q  -f run exec-multiple
+pintos -k -T 60 --bochs  --filesys-size=2 -p tests/userprog/wait-simple -a wait-simple -p tests/userprog/child-simple -a child-simple -- -q  -f run wait-simple 
