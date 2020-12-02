@@ -32,6 +32,9 @@ struct child_process_status         /* 该进程作为子进程的状态 */
    /* 如果为-1表示异常退出,子进程可能以及结束,父进程直接认为该子进程返回状态为-1 
       其他情况下,需要判断子进程是否已经运行结束,那么该ret_status就是子进程的返回值. */
    bool finish;                     /* 子进程是否运行结束 */
+   bool iswaited;                   /* if process_wait() has already
+   been successfully called for the given TID, returns -1
+   immediately, without waiting. */
    struct list_elem elem;           /* elem for child_status */
 };
 

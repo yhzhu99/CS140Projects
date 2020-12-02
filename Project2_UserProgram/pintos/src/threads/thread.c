@@ -208,6 +208,9 @@ thread_create (const char *name, int priority,
   t->relay_status = malloc(sizeof(struct child_process_status));
   t->relay_status->tid = tid;
   t->relay_status->finish = false;
+  t->relay_status->iswaited = false;
+  t->parent = thread_current();
+  list_push_back(&t->parent->child_status,&t->relay_status->elem);
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);

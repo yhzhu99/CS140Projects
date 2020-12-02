@@ -81,17 +81,22 @@ process_execute (const char *file_name)
   //printf("thread_created success\n");
   enum intr_level old_level;
   old_level = intr_disable ();
-  struct thread *child = get_thread_by_tid(tid);     /* 根据tid找到子进程 */
-  child->parent = thread_current();                   /* 更新parent_id */
-  // struct child_process_status* relay_status = malloc(sizeof(struct child_process_status));
-  // child->relay_status = relay_status;
-  // child->relay_status->tid = tid;
-  list_push_back(&child->parent->child_status,&child->relay_status->elem);
+  // struct thread *child = get_thread_by_tid(tid);     /* 根据tid找到子进程 */
+  // child->parent = thread_current();                   /* 更新parent_id */
+  // // struct child_process_status* relay_status = malloc(sizeof(struct child_process_status));
+  // // child->relay_status = relay_status;
+  // // child->relay_status->tid = tid;
+  // list_push_back(&child->parent->child_status,&child->relay_status->elem);
   intr_set_level(old_level);
   //printf("parent:%s process sema down\n",thread_current()->name);
-  sema_down(&child->parent->sema);                          /* 阻塞，等待子进程执行完start process*/            
-  //printf("parent:%s wake up now return tid:%d\n",thread_current()->name,tid);
-  if(child->relay_status->ret_status == -1)return TID_ERROR;
+  sema_down(&thread_current()->sema);                          /* 阻塞，等待子进程执行完loaded */            
+  struct child_process_status *child_status = get_child_status(tid);
+  if(child_status->finish)                              /* 子进程已经执行完毕 */
+  {
+    return child_status->ret_status;
+  }
+  // //printf("parent:%s wake up now return tid:%d\n",thread_current()->name,tid);
+  // if(child->relay_status->ret_status == -1)return TID_ERROR;
   return tid; 
 }
 
@@ -210,10 +215,12 @@ process_wait (tid_t child_tid UNUSED)
   if(child_tid == TID_ERROR)return -1;            /* TID invalid */
   struct child_process_status *child_status = get_child_status(child_tid);
   if(child_status == NULL)return -1;              /* not child_tid */
+  if(child_status->iswaited)return -1;
+  child_status->iswaited = true;
   // struct thread* child = get_child_by_tid(&thread_current()->sema.waiters,child_tid);
   // if(child==NULL)return child_status->ret_status; 
   //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
-  while(!child_status->finish && child_status->ret_status!=-1)
+  while(!child_status->finish)
   {
     //printf("process %s wait %d\n",thread_current()->name,child_status->tid);
     // printf("tid:%d,finish:%d,ret_status:%d\n",child_status->tid,child_status->finish,child_status->ret_status);
