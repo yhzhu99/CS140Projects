@@ -45,7 +45,7 @@ get_child_status(int tid)
 tid_t
 process_execute (const char *file_name) 
 {
-  printf("%d execute %s\n",thread_current()->tid,file_name);
+  //printf("%d execute %s\n",thread_current()->tid,file_name);
   char *fn_copy;
   tid_t tid;
 
@@ -80,15 +80,19 @@ process_execute (const char *file_name)
 
 
   /* 创建成功 */
-  printf("%d sema_down, create %d\n",thread_current()->tid,tid);
-  sema_down(&thread_current()->sema);                          /* 阻塞，等待子进程执行完loaded */            
+  //printf("%d create %d success\n",thread_current()->tid,tid);
   struct child_process_status *child_status = get_child_status(tid);
-  if(child_status->finish)                              /* 子进程已经执行完毕 */
+  while(child_status->loaded == 0)
   {
-    printf("%d wake up,child %d has finished,ret_status:%d\n",thread_current()->tid,tid,child_status->ret_status);
-    return child_status->ret_status;
+    //printf("tid:%d wait tid:%d to load\n",thread_current()->tid,child_status->child->tid);
+    sema_down(&thread_current()->sema);                          /* 阻塞，等待子进程执行完loaded */
   }
-  printf("%d wake up,%d is still running, return tid:%d\n",thread_current()->tid,tid,tid);
+  if(child_status->loaded == -1)                              /* 子进程已经加载完毕 */
+  {
+    //printf("%d wake up,child %d loaded failed, ret_status:%d\n",thread_current()->tid,tid,child_status->ret_status);
+    return -1;
+  }
+  //printf("%d wake up,%d is still running, return tid:%d\n",thread_current()->tid,tid,tid);
   return tid; 
 }
 
@@ -100,7 +104,7 @@ start_process (void *file_name_)
 {
   
   char *file_name = file_name_;
-  printf("tid:%d , name:%s , start process\n",thread_current()->tid,file_name,file_name);
+  //printf("tid:%d , name:%s , start process\n",thread_current()->tid,file_name,file_name);
   struct intr_frame if_;
   bool success;
 
@@ -123,8 +127,8 @@ start_process (void *file_name_)
     /* If load failed, quit. */
   if (!success)
   {
-    thread_current()->relay_status->ret_status = -1;
-    printf("%d load failed , sema up parent tid:%d\n",thread_current()->tid,thread_current()->parent->tid);
+    thread_current()->relay_status->loaded = -1;
+    //printf("%d load failed , sema up parent tid:%d\n",thread_current()->tid,thread_current()->parent->tid);
     sema_up(&thread_current()->parent->sema);
     exit(-1);
   }
@@ -163,7 +167,8 @@ start_process (void *file_name_)
   
 
   free(file_name);
-  printf("%d load success, sema up parent tid:%d\n",thread_current()->tid,thread_current()->parent->tid);
+  thread_current()->relay_status->loaded = 1;
+  //printf("%d load success, sema up parent tid:%d\n",thread_current()->tid,thread_current()->parent->tid);
   sema_up(&thread_current()->parent->sema);
 
   /* Start the user process by simulating a return from an
@@ -189,30 +194,30 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  printf("%d process wait %d\n",thread_current()->tid,child_tid);
+  //printf("%d process wait %d\n",thread_current()->tid,child_tid);
   if(child_tid == TID_ERROR)
   {
-    printf("%d TID invalid\n",child_tid);
+    //printf("%d TID invalid\n",child_tid);
     return -1;            /* TID invalid */
   }
   struct child_process_status *child_status = get_child_status(child_tid);
   if(child_status == NULL)
   {
-    printf("%d No child_status\n",child_tid);
+    //printf("%d No child_status\n",child_tid);
     return -1;              /* not child_tid */
   }
   if(child_status->iswaited)
   {
-    printf("%d Is being waited\n",child_tid);
+    //printf("%d Is being waited\n",child_tid);
     return -1;
   }
   child_status->iswaited = true;
   while(!child_status->finish)
   {
-    printf("%d sema down , waits for %d\n",thread_current()->tid,child_tid);
+    //printf("%d sema down , waits for %d\n",thread_current()->tid,child_tid);
     sema_down(&thread_current()->sema);
   }
-  printf("%d wait over , now free child_status->tid:%d\n",thread_current()->tid,child_tid);
+  //printf("%d wait over , now free child_status->tid:%d , return %d\n",thread_current()->tid,child_tid,child_status->ret_status);
   int res = child_status->ret_status;
   list_remove(&child_status->elem);
   free(child_status);

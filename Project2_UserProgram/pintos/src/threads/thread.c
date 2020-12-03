@@ -205,9 +205,11 @@ thread_create (const char *name, int priority,
 
   /* 初始化child_process_status */
   t->relay_status = malloc(sizeof(struct child_process_status));
+  t->relay_status->child = t;
   t->relay_status->tid = tid;
   t->relay_status->finish = false;
   t->relay_status->iswaited = false;
+  t->relay_status->loaded = 0;
   t->parent = thread_current();
   list_push_back(&t->parent->child_status,&t->relay_status->elem);
 
@@ -313,21 +315,23 @@ thread_exit (void)
 #ifdef USERPROG
   process_exit ();
 #endif
-
-  /* Remove thread from all threads list, set our status to dying,
-     and schedule another process.  That process will destroy us
-     when it calls thread_schedule_tail(). */
-  struct thread *cur = thread_current();
-  cur->relay_status->finish = true;
-  cur->relay_status->ret_status = cur->ret;
-  printf ("%s: exit(%d)\n", cur->name, cur->ret); /* 输出进程name以及进程return值 */
-
-  sema_up(&cur->parent->sema);
-
   intr_disable ();
+  struct thread *cur = thread_current();
+  printf ("%s: exit(%d)\n",cur->name, cur->ret); /* 输出进程name以及进程return值 */ 
+  if(cur->parent!=NULL)
+  {
+    cur->relay_status->ret_status = cur->ret;
+    cur->relay_status->finish = true;
+    sema_up(&cur->parent->sema);
+  }
+  /* Remove thread from all threads list, set our status to dying,
+    and schedule another process.  That process will destroy us
+    when it calls thread_schedule_tail(). */
+  
   while(!list_empty(&cur->child_status))
   {
     struct child_process_status *child_status= list_entry(list_pop_front(&cur->child_status),struct child_process_status, elem);
+    child_status->child->parent = NULL;
     free(child_status);
   }
   list_remove (&thread_current()->allelem);

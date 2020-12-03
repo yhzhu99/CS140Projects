@@ -25,7 +25,7 @@
 #include "tests/lib.h"
 
 static const int EXPECTED_DEPTH_TO_PASS = 30;
-static const int EXPECTED_REPETITIONS = 1;
+static const int EXPECTED_REPETITIONS = 10;
 
 enum child_termination_mode { RECURSE, CRASH };
 
@@ -169,7 +169,7 @@ main (int argc, char *argv[])
   if (n == 0)
     {
       if (expected_depth < EXPECTED_DEPTH_TO_PASS)
-        fail ("should have forked at least %d times.", EXPECTED_DEPTH_TO_PASS);
+        fail ("should have forked at least %d times.",EXPECTED_DEPTH_TO_PASS);
       msg ("success. program forked %d times.", howmany);
       msg ("end");
     }
