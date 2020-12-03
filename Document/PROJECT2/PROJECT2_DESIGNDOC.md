@@ -67,13 +67,56 @@ Our GitHub repository is private. Please contact us if necessary.
 
 ### 需求分析
 
+初始操作系统中已经有了支持加载和运行用户程序的功能，但是没有与用户进行I/O交互的功能，所以我们需要完善我们的代码来实现用户可以通过命令行的形式来运行自己想要运行的程序，并且可以在命令行中传入一定的参数，实现人机交互。在之前的项目当中，我们直接通过命令行使得程序直接在内核之中编译运行，这显然是不安全的，系统内核涉及到整个操作系统的安全性，尽管在我们的项目当中我们可以轻易的在内核中直接编译，但是提供程序接口给用户，来实现程序同系统直接按的通信是十分有必要的。典型的系统调用有halt, exit, exec, wait, create, remove, open, filesize, read, write, seek, tell, close等，这些也是文档中要求我们完成的部分。
+
 ### 设计思路
+
+通过阅读Pintos操作系统的官方文档，我们可以知道系统调用时会传入参数f，其类型为`struct intr_frame`，并且指针的解引用的值为`lib/syscall-nr.h`中已经定义好的枚举变量，我们需要根据不同的枚举变量来执行不同的函数，所以这里采用一个switch选择器进行选择是十分合理的。对于不同的函数系统调用函数而言，我们第一步的工作都是根据不同的指针类型对传入的值进行检查，所以需要先写出检查函数`pointer_valid`和`char_pointer_valid`对传入的参数进行检查。在打开文件时创建结构体`struct file f`来保存`fd`的值和文件名，并且将结构体中的`elem`存入当前线程的`fd_list`。在`read, filesize, write, tell, close, seek`系统调用都需要根据`fd->num`来获取`fd`，这促使我们将这一过程抽象成函数`find_fd_by_num(int num)`函数，以方便我们对代码进行检查。在执行系统调用函数之后，仍然需要对传入的参数进行检查空指针和个数检查，这就促使我们将每一个系统调用函数铲拆分成两部分，第一部分为检查参数部分，而第二部分为具体的执行代码，使得结构整体上十分清晰。具体的系统调用函数参照官方文档所述进行编写即可。
 
 ### DATA STRUCTURES
 
 > B1: Copy here the declaration of each new or changed `struct` or `struct' member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
+- [NEW] `struct lock file_lock`
+  - 定义文件锁来限制多个线程同时修改同一个文件
+- [NEW] `typedef int pid_t`
+  - 定义线程标识号的类型
+- [NEW] `int fd_num`
+  - 定义非负整数file descriptor
+- [NEW] `struct fd`
+  - 定义新的结构体来表示一个线程打开的文件
+- [NEW] `struct thread* parent`
+  - 表示线程的父进程
+- [NEW] `struct list fd_list` in `struct thread`
+  - 表示线程拥有的fd列表
+- [NEW] `struct list fd_list` in `struct thread`
+  - 表示线程拥有的fd列表
+- [NEW] `struct list child_status` in `struct thread`
+  - 表示子进程状态列表
+- [NEW] `struct file *execfile `in `struct thread`
+  - 表示线程正在执行的文件
+- [NEW] `struct child_process_status *relay_status; `in `struct thread`
+  - 表示转发给父进程的子进程状态 
+- [NEW] `struct semaphore sema;`in `struct thread`
+  - 表示子进程等待的信号量
+- [NEW] `struct int ret_status` in `struct child_process_status`
+  - 表示子进程的返回状态
+- [NEW] `struct int tid` in `struct child_process_status`
+  - 表示子进程的tid
+- [NEW] `struct thread* child ` in   `struct child_process_status`
+  - 表示指向子进程的指针
+- [NEW] `bool finish ` in   `struct child_process_status`
+  - 表示子进程是否完成的状态
+- [NEW] `bool iswaited` in `struct child_process_status`
+  - 表示子进程是否等待的状态
+- [NEW] `bool loaded` in `struct child_process_status`
+  - 表示子进程是否等待的状态
+- [NEW] `struct list_elem elem` in `struct child_process_status`
+  - 表示子进程状态结构体的列表元素
+
 > B2: Describe how file descriptors are associated with open files. Are file descriptors unique within the entire OS or just within a single process?
+
+文件描述符通过维护一个唯一的非负整数且不唯零和一的方法来对文件进行联系。我们需要保存文件和`fd`之间对应关系，这就促使我们将其打包成一个结构体，同时是打开的文件是属于某个进程的，这就需要我们来定义一个列表来对这个整体进行维护，同时在整体中出入`struct list_elem elem`元素即可实现列表。文件描述符在整个OS中都是唯一的，因为我们这里在`syscall.c`中维护一个起始值为2的全局变量，每一次打开一个文件就加一，这样就简单实现了文件描述符的唯一性。
 
 > B2: 描述文件描述符是如何与打开文件相联系的。文件描述符是在整个中唯一还是仅在单个进程中唯一？
 
