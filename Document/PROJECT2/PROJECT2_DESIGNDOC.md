@@ -1,35 +1,34 @@
 # PROJECT 2: USER PROGRAMS DESIGN DOCUMENT
 
-[TOC]
+[toc]
 
-## GROUP
+## 1.GROUP
 
 > Fill in the names and email addresses of your group members.
 
-| NAME | SID | MAIL     | RATIO |
-| ------ | -------- | ------------ | ---- |
-| 朱英豪 | 18373722 | 18373722@buaa.edu.cn | 25%  |
-| 施哲纶 | 18373044 | 18373044@buaa.edu.cn | 25%  |
-| 胡鹏飞 | 18373059 | 18373059@buaa.edu.cn | 25%  |
-| 朱晨宇 | 18373549 | 18373549@buaa.edu.cn | 25%  |
+
+| NAME | SID | MAIL | RATIO |
+| - | - | - | - |
+| 朱英豪 | 18373722 | 18373722@buaa.edu.cn | 25% |
+| 施哲纶 | 18373044 | 18373044@buaa.edu.cn | 25% |
+| 胡鹏飞 | 18373059 | 18373059@buaa.edu.cn | 25% |
+| 朱晨宇 | 18373549 | 18373549@buaa.edu.cn | 25% |
 
 > 主要负责内容
 
-| NAME   | RESPONSIBLE FOR          |
-| ------ | ------------------------ |
+
+| NAME | RESPONSIBLE FOR |
+| - | - |
 | 朱英豪 | 需求、思路设计；文档编写 |
-| 施哲纶 | 具体算法实现；文档审核   |
+| 施哲纶 | 具体算法实现；文档审核 |
 | 胡鹏飞 | 项目前期调研；理解Pintos |
-| 朱晨宇 | 负责Debug，代码风格检查  |
+| 朱晨宇 | 负责Debug，代码风格检查 |
 
 > Github记录
 
-
 > 样例通过情况
 
-
-
-## PRELIMINARIES
+## 2.PRELIMINARIES
 
 > If you have any preliminary comments on your submission, notes for the
 > TAs, or extra credit, please give them here.
@@ -43,21 +42,20 @@ Our GitHub repository is private. Please contact us if necessary.
 1. 操作系统概念(原书第9版)/(美)Abraham Silberschatz等著
 2. 原仓周老师PPT中的概念和课上讲解
 
-## QUESTION 1: ARGUMENT PASSING
+## 3. QUESTION 1: ARGUMENT PASSING
 
-### DATA STRUCTURES
+### 3.1 DATA STRUCTURES
 
-> A1: Copy here the declaration of each new or changed `struct' or
-> `struct' member, global or static variable, `typedef', or
+> A1: Copy here the declaration of each new or changed `struct' or `struct' member, global or static variable, `typedef', or
 > enumeration.  Identify the purpose of each in 25 words or less.
 
-### ALGORITHMS
+### 3.2 ALGORITHMS
 
 > A2: Briefly describe how you implemented argument parsing.  How do
 > you arrange for the elements of argv[] to be in the right order?
 > How do you avoid overflowing the stack page?
 
-### RATIONALE
+### 3.3 RATIONALE
 
 > A3: Why does Pintos implement strtok_r() but not strtok()?
 
@@ -65,19 +63,18 @@ Our GitHub repository is private. Please contact us if necessary.
 > and arguments.  In Unix-like systems, the shell does this
 > separation.  Identify at least two advantages of the Unix approach.
 
-## QUESTION 2: SYSTEM CALLS
+## 4. QUESTION 2: SYSTEM CALLS
 
-### DATA STRUCTURES
+### 4.1 DATA STRUCTURES
 
-> B1: Copy here the declaration of each new or changed `struct' or
-> `struct' member, global or static variable, `typedef', or
+> B1: Copy here the declaration of each new or changed `struct' or `struct' member, global or static variable, `typedef', or
 > enumeration.  Identify the purpose of each in 25 words or less.
 
 > B2: Describe how file descriptors are associated with open files.
 > Are file descriptors unique within the entire OS or just within a
 > single process?
 
-### ALGORITHMS
+### 4.2 ALGORITHMS
 
 > B3: Describe your code for reading and writing user data from the
 > kernel.
@@ -106,7 +103,7 @@ Our GitHub repository is private. Please contact us if necessary.
 > paragraphs, describe the strategy or strategies you adopted for
 > managing these issues.  Give an example.
 
-### SYNCHRONIZATION
+### 4.3 SYNCHRONIZATION
 
 > B7: The "exec" system call returns -1 if loading the new executable
 > fails, so it cannot return before the new executable has completed
@@ -120,7 +117,7 @@ Our GitHub repository is private. Please contact us if necessary.
 > terminates without waiting, before C exits?  After C exits?  Are
 > there any special cases?
 
-### RATIONALE
+### 4.4 RATIONALE
 
 > B9: Why did you choose to implement access to user memory from the
 > kernel in the way that you did?
@@ -131,7 +128,7 @@ Our GitHub repository is private. Please contact us if necessary.
 > B11: The default tid_t to pid_t mapping is the identity mapping.
 > If you changed it, what advantages are there to your approach?
 
-## SURVEY QUESTIONS
+## 5. SURVEY QUESTIONS
 
 Answering these questions is optional, but it will help us improve the
 course in future quarters.  Feel free to tell us anything you
