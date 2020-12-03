@@ -1,35 +1,34 @@
 # PROJECT 2: USER PROGRAMS DESIGN DOCUMENT
 
-[TOC]
+[toc]
 
-## GROUP
+## 1.GROUP
 
 > Fill in the names and email addresses of your group members.
 
-| NAME | SID | MAIL     | RATIO |
-| ------ | -------- | ------------ | ---- |
-| 朱英豪 | 18373722 | 18373722@buaa.edu.cn | 25%  |
-| 施哲纶 | 18373044 | 18373044@buaa.edu.cn | 25%  |
-| 胡鹏飞 | 18373059 | 18373059@buaa.edu.cn | 25%  |
-| 朱晨宇 | 18373549 | 18373549@buaa.edu.cn | 25%  |
+
+| NAME | SID | MAIL | RATIO |
+| - | - | - | - |
+| 朱英豪 | 18373722 | 18373722@buaa.edu.cn | 25% |
+| 施哲纶 | 18373044 | 18373044@buaa.edu.cn | 25% |
+| 胡鹏飞 | 18373059 | 18373059@buaa.edu.cn | 25% |
+| 朱晨宇 | 18373549 | 18373549@buaa.edu.cn | 25% |
 
 > 主要负责内容
 
-| NAME   | RESPONSIBLE FOR          |
-| ------ | ------------------------ |
+
+| NAME | RESPONSIBLE FOR |
+| - | - |
 | 朱英豪 | 需求、思路设计；文档编写 |
-| 施哲纶 | 具体算法实现；文档审核   |
+| 施哲纶 | 具体算法实现；文档审核 |
 | 胡鹏飞 | 项目前期调研；理解Pintos |
-| 朱晨宇 | 负责Debug，代码风格检查  |
+| 朱晨宇 | 负责Debug，代码风格检查 |
 
 > Github记录
 
-
 > 样例通过情况
 
-
-
-## PRELIMINARIES
+## 2.PRELIMINARIES
 
 > If you have any preliminary comments on your submission, notes for the TAs, or extra credit, please give them here.
 
@@ -40,7 +39,7 @@ Our GitHub repository is private. Please contact us if necessary.
 1. 操作系统概念(原书第9版)/(美)Abraham Silberschatz等著
 2. 原仓周老师PPT中的概念和课上讲解
 
-## QUESTION 1: ARGUMENT PASSING
+## 3. QUESTION 1: ARGUMENT PASSING
 
 ### 需求分析
 
@@ -50,14 +49,13 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
-
-### ALGORITHMS
+### 3.2 ALGORITHMS
 
 > A2: Briefly describe how you implemented argument parsing.  How do you arrange for the elements of argv[] to be in the right order? How do you avoid overflowing the stack page?
 
 > A2: 简要描述你是怎么实现Argument parsing的。你是如何安排argv[]中的elements，使其在正确的顺序的？你是如何避免stack page的溢出的？
 
-### RATIONALE
+### 3.3 RATIONALE
 
 > A3: Why does Pintos implement strtok_r() but not strtok()?
 
@@ -67,7 +65,7 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > A4: 在Pintos中，kernel将命令分成了可执行文件的name以及参数。在Unix-like的系统中，shell完成这部分的分隔。列举至少2种Unix这样做的好处。
 
-## QUESTION 2: SYSTEM CALLS
+## 4. QUESTION 2: SYSTEM CALLS
 
 ### 需求分析
 
@@ -81,7 +79,7 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > B2: 描述文件描述符是如何与打开文件相联系的。文件描述符是在整个中唯一还是仅在单个进程中唯一？
 
-### ALGORITHMS
+### 4.2 ALGORITHMS
 
 > B3: Describe your code for reading and writing user data from the kernel.
 
@@ -101,7 +99,7 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > 任何在用户指定的地址上对用户程序的内存的访问可能因为指针错误而失败。此类访问一定导致进程终止。系统调用充满了这样的访问。如一个“写”系统调用需要先从用户栈中读系统调用号，然后每一个调用的3个参数，然后是任意数量的用户内存。任何这些都可能造成失败。这构成一个设计错误处理的问题：如何最好地避免混淆主要错误处理的烦恼？此外，当错误被检查到，你如何保证所有的临时开出的资源（锁、缓冲区等）都被释放？用几段话来描述你处理这些问题的策略。
 
-### SYNCHRONIZATION
+### 4.3 SYNCHRONIZATION
 
 > B7: The "exec" system call returns -1 if loading the new executable fails, so it cannot return before the new executable has completed loading.  How does your code ensure this?  How is the load success/failure status passed back to the thread that calls "exec"?
 
@@ -111,7 +109,7 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > B8: 考虑有父进程P和它的子进程C。当P在Cexit之前调用wait(C)时，你如何确保同步以及如何避免争用的情况？你如何确保在每种情况下，所有的资源都被释放？如果P在C exit之前，没有waiting便终止？如果在C exit之后？有什么特殊情况吗？
 
-### RATIONALE
+### 4.4 RATIONALE
 
 > B9: Why did you choose to implement access to user memory from the kernel in the way that you did?
 
@@ -125,7 +123,7 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > B11: 默认的tid_t到pid_t的映射是identity mapping。如果你进行了更改，那么你的方法有什么优点？
 
-## SURVEY QUESTIONS
+## 5. SURVEY QUESTIONS
 
 Answering these questions is optional, but it will help us improve the course in future quarters.  Feel free to tell us anything you
 want--these questions are just to spur your thoughts.  You may also choose to respond anonymously in the course evaluations at the end of the quarter.
