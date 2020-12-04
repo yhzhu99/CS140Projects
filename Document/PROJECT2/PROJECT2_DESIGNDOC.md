@@ -1,4 +1,4 @@
-# PROJECT 2: USER PROGRAMS DESIGN DOCUMENT
+PROJECT 2: USER PROGRAMS DESIGN DOCUMENT
 
 [TOC]
 
@@ -41,7 +41,17 @@ Our GitHub repository is private. Please contact us if necessary.
 
 ### 需求分析
 
+此部分为参数传递部分。
+
+总体上来考察本次Project2的第一部分的需求分析，本组成员发现：在本次pintos实验中，项目需要能够通过输入的命令以及参数，相对应的执行不同部分的代码，以完成相对不同的功能以及作用。面对这样的需求，需要尽可能地将相对应的命令以及参数传递到项目中处理命令和参数内容的代码段处。
+
+具体的考察这一部分（参数传递部分）的需求。目前，`process_execute()`不支持将参数传递给新进程。本项目需要通过扩展实现此功能(能够通过`process_execute()`传递参数给新的进程)。由于参数的输入，是通过字符串的形式输入的，并且不同参数之间，用空格分隔。同时，需要注意的是，参数之间用来分隔的空格，并不一定是单个空格，也有可能是多个空格。但在参数分隔中，连续的多个空格，同时等效于单个空格的分隔效果。在输入的命令行中，第一个单词是程序名称，也就是对应的命令名称，第二个单词是第一个参数，第三个单词是第二个参数，，依此类推。也就是说，举一个例子`process_execute("grep foo bar")`应该运行 `grep`，随后传递两个参数`foo`和`bar`。
+
+本组需要完成的项目就是修改`process_execute()`，使之具备能够读取文件名，以及读取不同长度参数，并分析不同参数的功能。
+
 ### 设计思路
+
+参数传递部分的代码主要分布在src/userprog/process.c文件中。
 
 ### DATA STRUCTURES
 
