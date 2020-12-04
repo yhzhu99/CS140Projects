@@ -59,11 +59,15 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
+无。在本内容中，没有添加新的数据结构或者是修改已有的数据结构。
+
 ### ALGORITHMS
 
 > A2: Briefly describe how you implemented argument parsing.  How do you arrange for the elements of argv[] to be in the right order? How do you avoid overflowing the stack page?
 
 > A2: 简要描述你是怎么实现Argument parsing的。你是如何安排argv[]中的elements，使其在正确的顺序的？你是如何避免stack page的溢出的？
+
+
 
 ### RATIONALE
 
