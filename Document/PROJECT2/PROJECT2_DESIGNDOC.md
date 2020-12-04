@@ -83,9 +83,13 @@ Process_execute 提供的file_name 包括了 命令command和arguments string。
 
 > A3: 为什么Pintos中实现strtok_r()而不是strtok()？
 
+Strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 streak_r()中提供了一个占位符。在pintos中，内核可以将命令行分为命令/文件名和参数串两个部分，所以我们需要把参数的地址存放在之后可以获取到的地方。
+
 > A4: In Pintos, the kernel separates commands into a executable name and arguments.  In Unix-like systems, the shell does this separation.  Identify at least two advantages of the Unix approach.
 
 > A4: 在Pintos中，kernel将命令分成了可执行文件的name以及参数。在Unix-like的系统中，shell完成这部分的分隔。列举至少2种Unix这样做的好处。
+>
+> 第一个好处是，这可以缩短内核内部运行的时间。第二个好处是，这可以在讲命令传递给下一部分程序之前，检查参数是否超过限制以避免kernel fail。第三点好处是，分离参数和命令以便于进行更高级的预处理。
 
 ## QUESTION 2: SYSTEM CALLS
 
