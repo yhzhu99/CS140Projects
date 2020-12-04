@@ -91,7 +91,7 @@ Process_execute 提供的file_name 包括了 命令command和arguments string。
 
 > A3: 为什么Pintos中实现strtok_r()而不是strtok()？
 
-Strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 streak_r()中提供了一个占位符。在pintos中，内核可以将命令行分为命令/文件名和参数串两个部分，所以我们需要把参数的地址存放在之后可以获取到的地方。
+strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 streak_r()中提供了一个占位符。在pintos中，内核可以将命令行分为命令/文件名和参数串两个部分，所以我们需要把参数的地址存放在之后可以获取到的地方。
 
 > A4: In Pintos, the kernel separates commands into a executable name and arguments.  In Unix-like systems, the shell does this separation.  Identify at least two advantages of the Unix approach.
 
@@ -199,6 +199,23 @@ Strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 > B11: The default tid_t to pid_t mapping is the identity mapping. If you changed it, what advantages are there to your approach?
 
 > B11: 默认的tid_t到pid_t的映射是identity mapping。如果你进行了更改，那么你的方法有什么优点？
+
+## 核心：文件同步
+
+### 需求分析
+
+### 设计思路
+
+### 核心代码讲解
+## 核心：进程同步
+
+relay_status()传递子给父的信息，为了父若未，子退出了，使子退出时，信息仍然保留
+
+### 需求分析
+
+### 设计思路
+
+### 核心代码讲解
 
 ## SURVEY QUESTIONS
 
