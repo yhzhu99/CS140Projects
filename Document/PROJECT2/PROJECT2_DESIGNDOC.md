@@ -69,6 +69,13 @@ struct list_elem cpelem;            /* elem for child_list */
 
 tid_t parent_tid;                   /* 父进程的tid */
 
+- [NEW] `struct list child_list`
+  - 定义子进程列表来储存父进程的所有子进程
+- [NEW] `struct list_elem cpelem`
+  - 定义child_list 的 elem 
+- [NEW] `tid_t parent_tid`
+  - 定义父进程的tid
+
 ### ALGORITHMS
 
 > A2: Briefly describe how you implemented argument parsing.  How do you arrange for the elements of argv[] to be in the right order? How do you avoid overflowing the stack page?
