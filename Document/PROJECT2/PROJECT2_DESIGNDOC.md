@@ -69,6 +69,13 @@ struct list_elem cpelem;            /* elem for child_list */
 
 tid_t parent_tid;                   /* 父进程的tid */
 
+- [NEW] `struct list child_list`
+  - 定义子进程列表来储存父进程的所有子进程
+- [NEW] `struct list_elem cpelem`
+  - 定义child_list 的 elem 
+- [NEW] `tid_t parent_tid`
+  - 定义父进程的tid
+
 ### ALGORITHMS
 
 > A2: Briefly describe how you implemented argument parsing.  How do you arrange for the elements of argv[] to be in the right order? How do you avoid overflowing the stack page?
@@ -83,7 +90,7 @@ Process_execute 提供的file_name 包括了 命令command和arguments string。
 
 第二个部分是避免堆栈页面溢出的问题。
 
-待修改。
+我们在实施之前并没有预先计算出所需要的空间，但是，我们在实际处理溢出的时候，采用了这种办法，就是在每次使用esp之前，检查esp的有效性。
 
 ### RATIONALE
 
