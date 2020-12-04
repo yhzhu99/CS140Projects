@@ -213,6 +213,34 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 
 #### 初版
 
+在初级版本中，我们考虑到，在进行本项目的过程中，有着进程同步的需求，而这个需求无疑是十分必要的。
+
+因此，我们首先简单地思考了一下进程同步的问题，发现需要一个能够使进程等待的函数，来帮助我们完成进程同步的需求。
+
+本组同学在`process_wait()`中，添加/修改代码。在直观的思维理解中，必然是做出了这样的策略：父进程利用`process_excute()`创建子进程，随后在`process_wait()`中，父进程等待子进程结束，返回子进程的tid。
+
+```c++
+ struct thread* child = get_child_by_tid(&thread_current()->child_list,child_tid);
+  if(child==NULL)return -1; /* not child_tid */
+  int ret = child->ret;
+  //printf("child thread info:tid:%d name:%s parent_id:%d\n",child->tid,child->name,child->parent_tid);
+  while(child!=NULL){
+    thread_yield();
+    child = get_child_by_tid(&thread_current()->child_list,child_tid);
+  }
+  return ret;
+```
+
+这是一种相对来说非常直观并且直接的方法。这种方法用到了一些新的结构。
+
+```c++
+struct list child_list;             /* 子进程列表 */
+struct list_elem cpelem;            /* elem for child_list */
+tid_t parent_tid;                   /* 父进程的tid */
+```
+
+当然，这种直观的方法存在某些问题。这些问题和解决这些问题的方法，将在下一部分重构中，详细的讲解。
+
 #### 重构
 
 当我们创建一个子进程后，子进程要执行加载，但只当子进程从start_process()运行至load()后，我们才知道子进程是否真的加载成功。所以我们要保证子进程要运行至load()，才能得知子进程的加载成功与否的状态。需求中提到：如果子进程加载成功，便返回子进程的tid；如果子进程加载失败，则返回-1。在我们的初版代码中
