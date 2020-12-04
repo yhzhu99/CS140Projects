@@ -67,7 +67,15 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > A2: 简要描述你是怎么实现Argument parsing的。你是如何安排argv[]中的elements，使其在正确的顺序的？你是如何避免stack page的溢出的？
 
+第一个部分是参数解析Argument Parsing的问题。
 
+Process_execute 提供的file_name 包括了 命令command和arguments string。首先，我们先将第一个token和其他剩余部分分开来，这样就分成了两部分，分别为命令和参数串。用command的名字命名新的thread，随后传递参数给start_process(),load()以及setup_stack()。在其他部分需要这个command名字的时候，总是可以从thread名字处获取。
+
+当设置stack的时候，优先处理参数串和实际上是线程名称的命令名称。随后进行对齐、扫描等操作，将剩下的参数串分成的每个token的地址都添加进page中，生成argv[],argc，return addr等东西。
+
+第二个部分是避免堆栈页面溢出的问题。
+
+待修改。
 
 ### RATIONALE
 
