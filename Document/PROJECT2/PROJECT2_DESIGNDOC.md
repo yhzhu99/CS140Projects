@@ -53,6 +53,8 @@ Our GitHub repository is private. Please contact us if necessary.
 
 参数传递部分的代码主要分布在src/userprog/process.c文件中。
 
+在设计思路上，参数传递部分的主要思想非常简单。参数传递的主要设计思想就是将输入的命令行读入进来，初步分为命令/文件名和参数两大部分。随后通过空格分隔符，将参数进一步分隔为不同的参数1、参数2、参数3……给下一步的程序继续处理.
+
 ### DATA STRUCTURES
 
 > A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
