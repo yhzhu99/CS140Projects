@@ -245,9 +245,9 @@ tid_t parent_tid;                   /* 父进程的tid */
 
 当我们创建一个子进程后，子进程要执行加载，但只当子进程从start_process()运行至load()后，我们才知道子进程是否真的加载成功。所以我们要保证子进程要运行至load()，才能得知子进程的加载成功与否的状态。需求中提到：如果子进程加载成功，便返回子进程的tid；如果子进程加载失败，则返回-1。在我们的初版代码中，不管子进程如何，我们都会直接返回。现在我们要想知道子进程是否加载成功，就要在子进程加载完毕后，再去判断其加载是否成功，然后才返回。
 
-我们在重构版本的代码中，使用了信号量：信号量锁在上面，直到子进程执行完loaded之后，会在其执行失败时，通过sema_up()唤醒父进程；若执行成功，则唤醒父进程，此后父进程便可获取子进程是否加载成功的信息。
+我们在重构版本的代码中，process_wait()部分改用了信号量来实现：信号量锁在上面，直到子进程执行完loaded之后，会在其执行失败时，通过sema_up()唤醒父进程；若执行成功，则唤醒父进程，此后父进程便可获取子进程是否加载成功的信息。
 
-
+考虑以下需求：当child_tid不合法，则返回-1；当child_tid并不是你子进程的tid，返回-1；另外child_tid正在被其他进程等待，则返回-1。为了知道进程是否正在被别的进程等待，我们加入了新的数据结构bool量iswaited，表示进程是否被等。在process_wait()中，我们依次判断child_tid是否合法。当判断完后，令is_waited=true，表明进程处在等待状态。我们亦引入了bool量finish，表示进程是否已执行完。由于进程可能被多个子进程唤醒，故每次唤醒都要做判断，因此我们使用while，而非if。当执行完后，子进程不仅要向父进程其return status，为了节省空间，还要把子进程的空间释放掉(thread.h/struct child_process)。
 
 ### 关键代码解析
 
@@ -256,6 +256,11 @@ tid_t parent_tid;                   /* 父进程的tid */
 ```cpp
 int loaded;
 // 加载成功与否的状态：初始化为0，如果加载成功=1，如果加载失败=-1
+bool iswaited;
+/* if process_wait() has already
+   been successfully called for the given TID, returns -1
+   immediately, without waiting. */
+bool finish; /* 子进程是否运行结束 */
 ```
 
 **in `process.h`**
@@ -287,8 +292,7 @@ start_process (void *file_name_){
 
 ```cpp
 tid_t
-process_execute (const char *file_name) 
-{
+process_execute (const char *file_name){
   // ...
   /* 子进程创建成功 */
   struct child_process_status *child_status = get_child_status(tid);
@@ -306,35 +310,28 @@ process_execute (const char *file_name)
 
 ```cpp
 int
-process_wait (tid_t child_tid UNUSED) 
-{
-  //printf("%d process wait %d\n",thread_current()->tid,child_tid);
-  if(child_tid == TID_ERROR)
-  {
-    //printf("%d TID invalid\n",child_tid);
+process_wait (tid_t child_tid UNUSED){
+  // 依次判断child_tid是否合法
+  if(child_tid == TID_ERROR){
     return -1;            /* TID invalid */
   }
   struct child_process_status *child_status = get_child_status(child_tid);
-  if(child_status == NULL)
-  {
-    //printf("%d No child_status\n",child_tid);
+  if(child_status == NULL){
     return -1;              /* not child_tid */
   }
-  if(child_status->iswaited)
-  {
-    //printf("%d Is being waited\n",child_tid);
+  if(child_status->iswaited){
     return -1;
   }
   child_status->iswaited = true;
-  while(!child_status->finish)
-  {
-    //printf("%d sema down , waits for %d\n",thread_current()->tid,child_tid);
-    sema_down(&thread_current()->sema);
+  // 判断完后，child_tid合法，令is_waited=true，表明进程为等待状态。
+  while(!child_status->finish){
+  // 子进程执行完后的状态：若finish!=true，还未结束 (当进程执行完，会将其状态置为true)
+    sema_down(&thread_current()->sema); // 锁住
   }
-  //printf("%d wait over , now free child_status->tid:%d , return %d\n",thread_current()->tid,child_tid,child_status->ret_status);
-  int res = child_status->ret_status;
-  list_remove(&child_status->elem);
-  free(child_status);
+  // 若子进程执行完，finish=true：
+  int res = child_status->ret_status; // 父进程获取子进程的状态信息
+  list_remove(&child_status->elem); // 释放空间
+  free(child_status); // 把子进程从我拥有的child_list中移出
   return res;
 }
 ```
