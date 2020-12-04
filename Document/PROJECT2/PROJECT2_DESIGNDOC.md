@@ -250,9 +250,101 @@ tid_t parent_tid;                   /* 父进程的tid */
 
 #### 重构
 
-当我们创建一个子进程后，子进程要执行加载，但只当子进程从start_process()运行至load()后，我们才知道子进程是否真的加载成功。所以我们要保证子进程要运行至load()，才能得知子进程的加载成功与否的状态。需求中提到：如果子进程加载成功，便返回子进程的tid；如果子进程加载失败，则返回-1。在我们的初版代码中
+当我们创建一个子进程后，子进程要执行加载，但只当子进程从start_process()运行至load()后，我们才知道子进程是否真的加载成功。所以我们要保证子进程要运行至load()，才能得知子进程的加载成功与否的状态。需求中提到：如果子进程加载成功，便返回子进程的tid；如果子进程加载失败，则返回-1。在我们的初版代码中，不管子进程如何，我们都会直接返回。现在我们要想知道子进程是否加载成功，就要在子进程加载完毕后，再去判断其加载是否成功，然后才返回。
+
+我们在重构版本的代码中，使用了信号量：信号量锁在上面，直到子进程执行完loaded之后，会在其执行失败时，通过sema_up()唤醒父进程；若执行成功，则唤醒父进程，此后父进程便可获取子进程是否加载成功的信息。
+
+
 
 ### 关键代码解析
+
+**in `thread.h`**
+
+```cpp
+int loaded;
+// 加载成功与否的状态：初始化为0，如果加载成功=1，如果加载失败=-1
+```
+
+**in `process.h`**
+
+```cpp
+struct child_process_status *relay_status
+// 传递子进程给父进程的信息。目的是为了父进程若未退出，而子进程却退出了，使子进程退出时，子进程的相关信息仍然保留。
+```
+
+
+
+```cpp
+static void
+start_process (void *file_name_){
+  // ...
+  /* 加载用户进程的eip和esp eip:执行指令地址 esp:栈顶地址 */
+  success = load (token, &if_.eip, &if_.esp);
+  if (!success){ // 子进程执行完loaded，如果加载失败，唤醒父进程
+    thread_current()->relay_status->loaded = -1;
+    sema_up(&thread_current()->parent->sema);
+    exit(-1);
+  }
+  // ...
+  // 执行成功，唤醒父进程，此后父进程便可获取子进程是否加载成功的信息
+  thread_current()->relay_status->loaded = 1;
+  sema_up(&thread_current()->parent->sema);
+}
+```
+
+```cpp
+tid_t
+process_execute (const char *file_name) 
+{
+  // ...
+  /* 子进程创建成功 */
+  struct child_process_status *child_status = get_child_status(tid);
+  while(child_status->loaded == 0) // 子进程若还没有加载
+  {
+    sema_down(&thread_current()->sema); /* 阻塞，等待子进程执行完loaded */
+  }
+  if(child_status->loaded == -1) /* 此时子进程已经加载完毕 */
+  {
+    return -1;
+  }
+  return tid;
+}
+```
+
+```cpp
+int
+process_wait (tid_t child_tid UNUSED) 
+{
+  //printf("%d process wait %d\n",thread_current()->tid,child_tid);
+  if(child_tid == TID_ERROR)
+  {
+    //printf("%d TID invalid\n",child_tid);
+    return -1;            /* TID invalid */
+  }
+  struct child_process_status *child_status = get_child_status(child_tid);
+  if(child_status == NULL)
+  {
+    //printf("%d No child_status\n",child_tid);
+    return -1;              /* not child_tid */
+  }
+  if(child_status->iswaited)
+  {
+    //printf("%d Is being waited\n",child_tid);
+    return -1;
+  }
+  child_status->iswaited = true;
+  while(!child_status->finish)
+  {
+    //printf("%d sema down , waits for %d\n",thread_current()->tid,child_tid);
+    sema_down(&thread_current()->sema);
+  }
+  //printf("%d wait over , now free child_status->tid:%d , return %d\n",thread_current()->tid,child_tid,child_status->ret_status);
+  int res = child_status->ret_status;
+  list_remove(&child_status->elem);
+  free(child_status);
+  return res;
+}
+```
 
 ## SURVEY QUESTIONS
 
