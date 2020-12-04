@@ -59,7 +59,15 @@ Our GitHub repository is private. Please contact us if necessary.
 
 > A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
-无。在本内容中，没有添加新的数据结构或者是修改已有的数据结构。
+在本内容中，添加的新的数据结构或者是修改已有的数据结构。
+
+有：
+
+struct list child_list;             /* 子进程列表 */
+
+struct list_elem cpelem;            /* elem for child_list */
+
+tid_t parent_tid;                   /* 父进程的tid */
 
 ### ALGORITHMS
 
