@@ -83,7 +83,7 @@ Process_execute 提供的file_name 包括了 命令command和arguments string。
 
 第二个部分是避免堆栈页面溢出的问题。
 
-待修改。
+我们在实施之前并没有预先计算出所需要的空间，但是，我们在实际处理溢出的时候，采用了这种办法，就是在每次使用esp之前，检查esp的有效性。
 
 ### RATIONALE
 
