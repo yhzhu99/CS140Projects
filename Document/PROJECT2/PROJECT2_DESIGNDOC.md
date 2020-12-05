@@ -172,12 +172,14 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 > B4: Suppose a system call causes a full page (4,096 bytes) of data to be copied from user space into the kernel.  What is the least and the greatest possible number of inspections of the page table (e.g. calls to pagedir_get_page()) that might result?  What about for a system call that only copies 2 bytes of data?  Is there room for improvement in these numbers, and how much?
 
 > B4: 假设一个系统调用造成一整页的数据(4096 bytes)从用户空间复制到kernel。
-> 
+
 > 求可能造成的最小和最大的页表的检查次数。(e.g. 对pagedir_get_page()的调用)。如果系统调用只copy了2 bytes的数据呢？还有没有空间优化？可以优化多少？
 
 > B5: Briefly describe your implementation of the "wait" system call and how it interacts with process termination.
 
 > B5: 简要描述你"wait"系统调用的实现以及它是如何与进程停止交互的。
+
+在我们文档之后的部分：[**核心：进程同步**](#核心进程同步)中详细介绍了这一部分。简要来说，我们引入了信号量来上锁、`iswaited`来判断进程是否被等、`finish`来判断进程当前是否已结束等数据结构，并对`loaded`的状态进行了严谨的判断，对僵死进程亦作了处理，保证了当出错时与进程停止交互，实现了`wait`同步。
 
 > B6: Any access to user program memory at a user-specified address can fail due to a bad pointer value.  Such accesses must cause the process to be terminated.  System calls are fraught with such accesses, e.g. a "write" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point.  This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling?  Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed?  In a few paragraphs, describe the strategy or strategies you adopted for managing these issues.  Give an example.
 
@@ -189,7 +191,7 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 
 > B7: 如果新的可执行文件加载失败，"exec"系统调用会返回-1，所以它不能够在该新的可执行文件成功加载之前返回。你的代码是如何保证这一点的？加载成功/失败的状态是如何传递回调用"exec"的线程的？
 
-我们是利用信号量来保证可执行文件加载失败后在新的可执行文件成功加载之后返回。这一部分的问题，我们主要在`process.c`里实现。当我们读入了命令，经过参数传递等一系列操作，需要创建一个新的可执行文件/线程之时，在创建完成之后，我们用信号量将其阻塞，等待子进程loaded。在子进程加载完成之前，`child_status->loaded`=0;如果子进程加载失败，则`child_status->loaded`=-1；如果子进程加载成功，则`child_status->loaded`=1 。
+在我们文档之后的部分：[**核心：进程同步**](#核心进程同步)中详细介绍了这一部分。简要来说，我们是利用信号量来保证可执行文件加载失败后在新的可执行文件成功加载之后返回。这一部分的问题，我们主要在`process.c`里实现。当我们读入了命令，经过参数传递等一系列操作，需要创建一个新的可执行文件/线程之时，在创建完成之后，我们用信号量将其阻塞，等待子进程loaded。在子进程加载完成之前，`child_status->loaded`=0;如果子进程加载失败，则`child_status->loaded`=-1；如果子进程加载成功，则`child_status->loaded`=1 。
 
 ```c++
 	while(child_status->loaded == 0)
