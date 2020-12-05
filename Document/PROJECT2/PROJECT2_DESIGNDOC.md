@@ -169,6 +169,180 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 
 > B3: 描述你用来从kernel中读写文件的代码。
 
+主要在`sys call.c`中
+
+`sys call_read`中
+
+```c++
+void 
+syscall_read(struct intr_frame *f)
+{
+  if(!pointer_valid(f->esp+4,3))
+  {
+    exit(-1);
+  }
+  int fd = *(int*)(f->esp+4);
+  void *buffer = *(char**)(f->esp+8);
+  unsigned size = *(unsigned*)(f->esp+12);
+  if(!char_pointer_valid(buffer))
+  {
+    exit(-1);
+  }
+  lock_acquire(&file_lock);
+  f->eax = read(fd,buffer,size);
+  lock_release(&file_lock);
+}
+
+int 
+read(int num,void *buffer,unsigned size)
+{
+  /* Fd 0 reads from the keyboard using input_getc(). */
+  if(num == 0)
+  {
+    int i;
+    for(i=0;i<size;i++){
+      (*((char**)buffer))[i] = input_getc();
+    }
+    return size;
+  }
+  struct fd* fd = find_fd_by_num(num);
+  if(fd == NULL)
+  {
+    return -1;    
+    /* -1 if the file could not be read (due to a condition other than end of file) */
+  }
+  return file_read(fd->file,buffer,size);
+}
+```
+
+
+
+`process.c`的
+
+`load`中
+
+```c++
+bool
+load (const char *file_name, void (**eip) (void), void **esp) 
+{
+  //printf("%s start loading\n",file_name);
+  struct thread *t = thread_current ();
+  struct Elf32_Ehdr ehdr;
+  struct file *file = NULL;
+  off_t file_ofs;
+  bool success = false;
+  int i;
+
+  /* Allocate and activate page directory. */
+  t->pagedir = pagedir_create ();
+  if (t->pagedir == NULL) 
+    goto done;
+
+  process_activate ();
+  /* Open executable file. */
+  lock_acquire(&file_lock);
+  file = filesys_open (file_name);
+  if (file == NULL) 
+    {
+      printf ("load: %s: open failed\n", file_name);
+      goto done; 
+    }
+  /* Read and verify executable header. */
+  if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
+      || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
+      || ehdr.e_type != 2
+      || ehdr.e_machine != 3
+      || ehdr.e_version != 1
+      || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
+      || ehdr.e_phnum > 1024) 
+    {
+      printf ("load: %s: error loading executable\n", file_name);
+      goto done; 
+    }
+  /* Read program headers. */
+  file_ofs = ehdr.e_phoff;
+  for (i = 0; i < ehdr.e_phnum; i++) 
+    {
+      struct Elf32_Phdr phdr;
+
+      if (file_ofs < 0 || file_ofs > file_length (file))
+        goto done;
+      file_seek (file, file_ofs);
+
+      if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
+        goto done;
+      file_ofs += sizeof phdr;
+      switch (phdr.p_type) 
+        {
+        case PT_NULL:
+        case PT_NOTE:
+        case PT_PHDR:
+        case PT_STACK:
+        default:
+          /* Ignore this segment. */
+          break;
+        case PT_DYNAMIC:
+        case PT_INTERP:
+        case PT_SHLIB:
+          goto done;
+        case PT_LOAD:
+          if (validate_segment (&phdr, file)) 
+            {
+              bool writable = (phdr.p_flags & PF_W) != 0;
+              uint32_t file_page = phdr.p_offset & ~PGMASK;
+              uint32_t mem_page = phdr.p_vaddr & ~PGMASK;
+              uint32_t page_offset = phdr.p_vaddr & PGMASK;
+              uint32_t read_bytes, zero_bytes;
+              if (phdr.p_filesz > 0)
+                {
+                  /* Normal segment.
+                     Read initial part from disk and zero the rest. */
+                  read_bytes = page_offset + phdr.p_filesz;
+                  zero_bytes = (ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
+                                - read_bytes);
+                }
+              else 
+                {
+                  /* Entirely zero.
+                     Don't read anything from disk. */
+                  read_bytes = 0;
+                  zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
+                }
+              if (!load_segment (file, file_page, (void *) mem_page,
+                                 read_bytes, zero_bytes, writable))
+                goto done;
+            }
+          else
+            goto done;
+          break;
+        }
+    }
+  /* Set up stack. */
+  if (!setup_stack (esp))
+    goto done;
+
+  /* Start address. */
+  *eip = (void (*) (void)) ehdr.e_entry;
+  success = true;
+
+ done:
+  /* We arrive here whether the load is successful or not. */
+  if(success)
+  {
+    t->execfile = file;
+    file_deny_write(file);
+  }
+  else
+  {
+    file_close(file);
+  }
+  lock_release(&file_lock);
+  return success;
+}
+```
+
+
+
 > B4: Suppose a system call causes a full page (4,096 bytes) of data to be copied from user space into the kernel.  What is the least and the greatest possible number of inspections of the page table (e.g. calls to pagedir_get_page()) that might result?  What about for a system call that only copies 2 bytes of data?  Is there room for improvement in these numbers, and how much?
 
 > B4: 假设一个系统调用造成一整页的数据(4096 bytes)从用户空间复制到kernel。
