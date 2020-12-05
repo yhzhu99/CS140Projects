@@ -221,6 +221,13 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 
 如果加载成功，则load赋值为1.
 
+```c++
+	thread_current()->relay_status->loaded = 1;
+  sema_up(&thread_current()->parent->sema);
+```
+
+
+
 > B8: Consider parent process P with child process C.  How do you ensure proper synchronization and avoid race conditions when P calls wait(C) before C exits?  After C exits?  How do you ensure that all resources are freed in each case?  How about when P terminates without waiting, before C exits?  After C exits?  Are there any special cases?
 
 > B8: 考虑有父进程P和它的子进程C。当P在Cexit之前调用wait(C)时，你如何确保同步以及如何避免争用的情况？你如何确保在每种情况下，所有的资源都被释放？如果P在C exit之前，没有waiting便终止？如果在C exit之后？有什么特殊情况吗？
