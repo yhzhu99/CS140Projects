@@ -438,7 +438,21 @@ syscall_wait(struct intr_frame *f)
 
 > B8: Consider parent process P with child process C.  How do you ensure proper synchronization and avoid race conditions when P calls wait(C) before C exits?  After C exits?  How do you ensure that all resources are freed in each case?  How about when P terminates without waiting, before C exits?  After C exits?  Are there any special cases?
 
-> B8: 考虑有父进程P和它的子进程C。当P在Cexit之前调用wait(C)时，你如何确保同步以及如何避免争用的情况？你如何确保在每种情况下，所有的资源都被释放？如果P在C exit之前，没有waiting便终止？如果在C exit之后？有什么特殊情况吗？
+> B8: 考虑有父进程P和它的子进程C。当P在C exit之前调用wait(C)时，你如何确保同步以及如何避免争用的情况？你如何确保在每种情况下，所有的资源都被释放？如果P在C exit之前，没有waiting便终止？如果在C exit之后？有什么特殊情况吗？
+
+我们通过在线程之中维护一个`child_process_status `类型的指针，用以记录进程的状态，如果直接放在`thread`结构体中，进程被释放之后所有信息都被释放，此时父进程`wait`子进程会发现Pid对应的线程已经被释放，也就会发生错误，所以一定要重新定义一个结构体来记录线程的一些需要保留的状态。
+
+有一下4中情况：
+
+1. P 在C退出之前调用 wait函数
+   P会一直等待C结束并获取C的退出状态
+2. P 在C退出之后调用 wait函数
+   在`child_process_status`保存有C的退出状态，直接获取C的退出状态
+3. P终止而不等待C退出
+   父进程中的所有的文件描述符的列表清空，并设置自己的relay_status和释放掉child_status中的所有元素。
+   子进程退出之后会修改自己的status，此时会忽略父进程是否还在等待。
+
+在C exit之后，没有特殊情况，因为C exit之后会释放其拥有的所有资源并且设置线程对应的status结构题中的元素。
 
 ### RATIONALE
 
@@ -446,13 +460,27 @@ syscall_wait(struct intr_frame *f)
 
 > B9: 为什么你使用这种方式来实现从内核对用户内存的访问？
 
+因为如果不对传入的参数进行层层检查，用户程序很有可能造成Kernel Panic从而导致整个系统的崩溃。在深刻理解了传入参数的实际意义之后我们进行了严格的检查从而实现了内核对用户内存的访问。
+
 > B10: What advantages or disadvantages can you see to your design for file descriptors?
 
 > B10: 你对文件描述符的设计有什么优劣吗？
 
+优势：
+
+- 可以在整个操作系统中使用独一无二的`Fd_num`。
+
+- 减少了`struct thread`在栈中所占有的空间。
+
+劣势；
+
+- 如果打开的文件太多，可能会造成`fd_num`溢出。
+
 > B11: The default tid_t to pid_t mapping is the identity mapping. If you changed it, what advantages are there to your approach?
 
 > B11: 默认的tid_t到pid_t的映射是identity mapping。如果你进行了更改，那么你的方法有什么优点？
+
+我们没有修改他们。
 
 ## 核心：文件同步
 
