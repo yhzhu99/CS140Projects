@@ -104,6 +104,7 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 
 > A4: 在Pintos中，kernel将命令分成了可执行文件的name以及参数。在Unix-like的系统中，shell完成这部分的分隔。列举至少2种Unix这样做的好处。
 >
+
 第一个好处是，这可以缩短内核内部运行的时间。第二个好处是，这可以在讲命令传递给下一部分程序之前，检查参数是否超过限制以避免kernel fail。第三点好处是，分离参数和命令以便于进行更高级的预处理。
 
 ## QUESTION 2: SYSTEM CALLS
