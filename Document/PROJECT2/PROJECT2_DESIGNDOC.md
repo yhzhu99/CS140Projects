@@ -159,9 +159,9 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 
 > B2: Describe how file descriptors are associated with open files. Are file descriptors unique within the entire OS or just within a single process?
 
-文件描述符通过维护一个唯一的非负整数且不唯零和一的方法来对文件进行联系。我们需要保存文件和`fd`之间对应关系，这就促使我们将其打包成一个结构体，同时是打开的文件是属于某个进程的，这就需要我们来定义一个列表来对这个整体进行维护，同时在整体中出入`struct list_elem elem`元素即可实现列表。文件描述符在整个OS中都是唯一的，因为我们这里在`syscall.c`中维护一个起始值为2的全局变量，每一次打开一个文件就加一，这样就简单实现了文件描述符的唯一性。
-
 > B2: 描述文件描述符是如何与打开文件相联系的。文件描述符是在整个中唯一还是仅在单个进程中唯一？
+
+文件描述符通过维护一个唯一的非负整数且不唯零和一的方法来对文件进行联系。我们需要保存文件和`fd`之间对应关系，这就促使我们将其打包成一个结构体，同时是打开的文件是属于某个进程的，这就需要我们来定义一个列表来对这个整体进行维护，同时在整体中出入`struct list_elem elem`元素即可实现列表。文件描述符在整个OS中都是唯一的，因为我们这里在`syscall.c`中维护一个起始值为2的全局变量，每一次打开一个文件就加一，这样就简单实现了文件描述符的唯一性。
 
 ### ALGORITHMS
 
@@ -341,7 +341,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
 }
 ```
 
+系统调用读写文件的功能时，首先进入`syscall_red`函数：
 
+首先要检查`buffer` , `f`和 `buffer+size` 是否是合法的指针，如果不是直接调用exit(1)进行退出。检查完毕之后获取文件锁l`file_lock`, 指行`read`函数，并将其返回值赋给`f->eax`,读取完毕之后释放文件锁。
+
+`read`函数首先要判断传入的第一个参数`num`，`num`如果为0则代表需要用户进行输入，并将其读入到`buffer`指向的地址当中，否则根据`num`值去寻找对应的文件描述，如果文件描述为空，即没有找到这样的文件描述符，则返回`-1`，否则执行已经写好的`file_read`函数并返回该函数的返回值。
 
 > B4: Suppose a system call causes a full page (4,096 bytes) of data to be copied from user space into the kernel.  What is the least and the greatest possible number of inspections of the page table (e.g. calls to pagedir_get_page()) that might result?  What about for a system call that only copies 2 bytes of data?  Is there room for improvement in these numbers, and how much?
 
@@ -355,9 +359,37 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
 在我们文档之后的部分：[**核心：进程同步**](#核心进程同步)中详细介绍了这一部分。简要来说，我们引入了信号量来上锁、`iswaited`来判断进程是否被等、`finish`来判断进程当前是否已结束等数据结构，并对`loaded`的状态进行了严谨的判断，对僵死进程亦作了处理，保证了当出错时与进程停止交互，实现了`wait`同步。
 
+当系统调用是SYS_WAIT类型时，首先进入函数`syscall_wait`函数，对出入的`f`变量的值进行检查，检查通过之后调用`wait`函数。
+
+```c
+void 
+syscall_wait(struct intr_frame *f)
+{
+   if(!pointer_valid(f->esp+4,1)
+    exit(-1);
+  
+  pid_t pid = *(int*)(f->esp+4);
+  f->eax = wait(pid)
+}
+```
+
+`wait`函数中直接返回`process_wait`函数的返回值即可，具体的实习方法已经在`process_wait`中实现，这里就不再赘述了。
+
 > B6: Any access to user program memory at a user-specified address can fail due to a bad pointer value.  Such accesses must cause the process to be terminated.  System calls are fraught with such accesses, e.g. a "write" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point.  This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling?  Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed?  In a few paragraphs, describe the strategy or strategies you adopted for managing these issues.  Give an example.
 
 > 任何在用户指定的地址上对用户程序的内存的访问可能因为指针错误而失败。此类访问一定导致进程终止。系统调用充满了这样的访问。如一个“写”系统调用需要先从用户栈中读系统调用号，然后每一个调用的3个参数，然后是任意数量的用户内存。任何这些都可能造成失败。这构成一个设计错误处理的问题：如何最好地避免混淆主要错误处理的烦恼？此外，当错误被检查到，你如何保证所有的临时开出的资源（锁、缓冲区等）都被释放？用几段话来描述你处理这些问题的策略。
+
+在我们代码当中，系统调用所传入的第一个参数`f`首先要进行是否是空的检查，然后再根据不同的系统调用去检查传参位置是否为合法的。在`process.c`中的`load`函数中：函数返回之前会进行所释放，而在指行函数期间，如果出现了不合法的指针的时候，我们都要直接跳到函数的最后进行资源释放，然后返回相应的值，这样就避免了锁资源都被释放。
+
+在`syscall_write`函数中，我们有如下结构：
+
+```c
+  lock_acquire(&file_lock);
+  f->eax = write(fd,buffer,size);
+  lock_release(&file_lock);
+```
+
+这就保证了指行完write操作后一定能够把锁释放掉。
 
 ### SYNCHRONIZATION
 
