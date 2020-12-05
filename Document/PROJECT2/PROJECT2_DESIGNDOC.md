@@ -30,7 +30,7 @@ PROJECT 2: USER PROGRAMS DESIGN DOCUMENT
 
 > If you have any preliminary comments on your submission, notes for the TAs, or extra credit, please give them here.
 
-Our GitHub repository is private. Please contact us if necessary.
+我们该项目的Github仓库为私有仓库，如有需要，请联系我们。
 
 > Please cite any offline or online sources you consulted while preparing your submission, other than the Pintos documentation, course text, lecture notes, and course staff.
 
@@ -425,20 +425,20 @@ want--these questions are just to spur your thoughts.  You may also choose to re
 
 > In your opinion, was this assignment, or any one of the three problems in it, too easy or too hard?  Did it take too long or too little time?
 
-All of these three are too hard for our team. It takes us over 200 hours to finish the assignment!
+这个作业对我们而言非常难。我们基本上整整7天其他什么作业都没做，只用来理解和写Pintos。
 
 > Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design?
 
-Yes. Especially the last part (BSD Scheduler) -- taking more aspects in OS into account, the thought of balancing threads' different scheduling needs...
+是的。尤其是process_wait()的部分，如何引入信号量，如何周全地考虑父子进程先后退出的同步问题，如何适当地释放资源，这些考虑使我们对OS的理解得到了很大的提升。
 
 > Is there some particular fact or hint we should give students in future quarters to help them solve the problems?  Conversely, did you find any of our guidance to be misleading?
 
-No. The guidance is quite clear.
+实验指导书已经足够明确，我们组在做本次Project 2的唯一参考基本上就是该实验指导书。
 
 > Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects?
 
-It is recommended that when doing experiments, the TAs should first familiarize us with the OS, not let us explore it ourselves.
+希望助教能给我们更多的指导，比如在开始的时候带领我们理解一下实验的任务要求，用户进程相关的知识背景，以及核心代码的部分讲解。
 
 > Any other comments?
 
-Thank you to all the teaching assistants!
+感谢在实验过程中解答我们问题的每一位助教！
