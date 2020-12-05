@@ -189,6 +189,38 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 
 > B7: 如果新的可执行文件加载失败，"exec"系统调用会返回-1，所以它不能够在该新的可执行文件成功加载之前返回。你的代码是如何保证这一点的？加载成功/失败的状态是如何传递回调用"exec"的线程的？
 
+我们是利用信号量来保证可执行文件加载失败后在新的可执行文件成功加载之后返回。这一部分的问题，我们主要在`process.c`里实现。当我们读入了命令，经过参数传递等一系列操作，需要创建一个新的可执行文件/线程之时，在创建完成之后，我们用信号量将其阻塞，等待子进程loaded。在子进程加载完成之前，`child_status->loaded`=0;如果子进程加载失败，则`child_status->loaded`=-1；如果子进程加载成功，则`child_status->loaded`=1 。
+
+```c++
+	while(child_status->loaded == 0)
+  {
+    sema_down(&thread_current()->sema);                   /* 阻塞，等待子进程执行完loaded */
+  }
+  if(child_status->loaded == -1)                              /* 子进程已经加载完毕 */
+  {
+    return -1;
+  }
+```
+
+而在子进程这一边。`start_process`中，我们利用success来传递子进程是否加载成功。
+
+如果加载不成功，则在sema_up之前，将load赋值为-1.
+
+```c++
+  /* 加载用户进程的eip和esp eip:执行指令地址 esp:栈顶地址 */
+  success = load (token, &if_.eip, &if_.esp);
+
+    /* If load failed, quit. */
+  if (!success)
+  {
+    thread_current()->relay_status->loaded = -1;
+    sema_up(&thread_current()->parent->sema);
+    exit(-1);
+  }
+```
+
+如果加载成功，则load赋值为1.
+
 > B8: Consider parent process P with child process C.  How do you ensure proper synchronization and avoid race conditions when P calls wait(C) before C exits?  After C exits?  How do you ensure that all resources are freed in each case?  How about when P terminates without waiting, before C exits?  After C exits?  Are there any special cases?
 
 > B8: 考虑有父进程P和它的子进程C。当P在Cexit之前调用wait(C)时，你如何确保同步以及如何避免争用的情况？你如何确保在每种情况下，所有的资源都被释放？如果P在C exit之前，没有waiting便终止？如果在C exit之后？有什么特殊情况吗？
