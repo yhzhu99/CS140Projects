@@ -24,9 +24,20 @@
 
 > Github记录
 
+![](img/github-1.png)
+![](img/github-2.png)
+![](img/github-3.png)
+![](img/github-4.png)
+![](img/github-5.png)
+![](img/github-6.png)
+![](img/github-7.png)
+![](img/github-8.png)
+![](img/github-9.png)
+![](img/github-10.png)
+
 > 样例通过情况
 
-80点全过截图：
+All 80 tests passed：
 
 ![](img/all-passed.png)
 
