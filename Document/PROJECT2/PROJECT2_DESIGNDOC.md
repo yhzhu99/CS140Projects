@@ -63,11 +63,11 @@ PROJECT 2: USER PROGRAMS DESIGN DOCUMENT
 
 有：
 
+```c
 struct list child_list;             /* 子进程列表 */
-
 struct list_elem cpelem;            /* elem for child_list */
-
 tid_t parent_tid;                   /* 父进程的tid */
+```
 
 - [NEW] `struct list child_list`
   - 定义子进程列表来储存父进程的所有子进程
@@ -86,7 +86,7 @@ tid_t parent_tid;                   /* 父进程的tid */
 
 Process_execute 提供的file_name 包括了 命令command和arguments string。首先，我们先将第一个token和其他剩余部分分开来，这样就分成了两部分，分别为命令和参数串。用command的名字命名新的thread，随后传递参数给start_process(),load()以及setup_stack()。在其他部分需要这个command名字的时候，总是可以从thread名字处获取。
 
-当设置stack的时候，优先处理参数串和实际上是线程名称的命令名称。随后进行对齐、扫描等操作，将剩下的参数串分成的每个token的地址都添加进page中，生成argv[],argc，return addr等东西。
+当设置stack的时候，优先处理参数串和实际上是线程名称的命令名称。随后进行对齐、扫描等操作，将剩下的参数串分成的每个token的地址都添加进page中，生成`argv[],argc`，`return addr`等东西。
 
 第二个部分是避免堆栈页面溢出的问题。
 
@@ -98,7 +98,7 @@ Process_execute 提供的file_name 包括了 命令command和arguments string。
 
 > A3: 为什么Pintos中实现strtok_r()而不是strtok()？
 
-strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 streak_r()中提供了一个占位符。在pintos中，内核可以将命令行分为命令/文件名和参数串两个部分，所以我们需要把参数的地址存放在之后可以获取到的地方。
+`strtok_r()`和`strtok()`之间的唯一区别就是`save_ptr()`. `save_ptr() `在 `streak_r()`中提供了一个占位符。在pintos中，内核可以将命令行分为命令/文件名和参数串两个部分，所以我们需要把参数的地址存放在之后可以获取到的地方。
 
 > A4: In Pintos, the kernel separates commands into a executable name and arguments.  In Unix-like systems, the shell does this separation.  Identify at least two advantages of the Unix approach.
 
@@ -111,15 +111,17 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
 
 ### 需求分析
 
-初始操作系统中已经有了支持加载和运行用户程序的功能，但是没有与用户进行I/O交互的功能，所以我们需要完善我们的代码来实现用户可以通过命令行的形式来运行自己想要运行的程序，并且可以在命令行中传入一定的参数，实现人机交互。在之前的项目当中，我们直接通过命令行使得程序直接在内核之中编译运行，这显然是不安全的，系统内核涉及到整个操作系统的安全性，尽管在我们的项目当中我们可以轻易的在内核中直接编译，但是提供程序接口给用户，来实现程序同系统直接按的通信是十分有必要的。典型的系统调用有halt, exit, exec, wait, create, remove, open, filesize, read, write, seek, tell, close等，这些也是文档中要求我们完成的部分。
+初始操作系统中已经有了支持加载和运行用户程序的功能，但是没有与用户进行I/O交互的功能，所以我们需要完善我们的代码来实现用户可以通过命令行的形式来运行自己想要运行的程序，并且可以在命令行中传入一定的参数，实现人机交互。在之前的项目当中，我们直接通过命令行使得程序直接在内核之中编译运行，这显然是不安全的，系统内核涉及到整个操作系统的安全性，尽管在我们的项目当中我们可以轻易的在内核中直接编译，但是提供程序接口给用户，来实现程序同系统直接按的通信是十分有必要的。典型的系统调用有`halt, exit, exec, wait, create, remove, open, filesize, read, write, seek, tell, close`等，这些也是文档中要求我们完成的部分。
 
 ### 设计思路
 
-通过阅读Pintos操作系统的官方文档，我们可以知道系统调用时会传入参数f，其类型为`struct intr_frame`，并且指针的解引用的值为`lib/syscall-nr.h`中已经定义好的枚举变量，我们需要根据不同的枚举变量来执行不同的函数，所以这里采用一个switch选择器进行选择是十分合理的。对于不同的函数系统调用函数而言，我们第一步的工作都是根据不同的指针类型对传入的值进行检查，所以需要先写出检查函数`pointer_valid`和`char_pointer_valid`对传入的参数进行检查。在打开文件时创建结构体`struct file f`来保存`fd`的值和文件名，并且将结构体中的`elem`存入当前线程的`fd_list`。在`read, filesize, write, tell, close, seek`系统调用都需要根据`fd->num`来获取`fd`，这促使我们将这一过程抽象成函数`find_fd_by_num(int num)`函数，以方便我们对代码进行检查。在执行系统调用函数之后，仍然需要对传入的参数进行检查空指针和个数检查，这就促使我们将每一个系统调用函数铲拆分成两部分，第一部分为检查参数部分，而第二部分为具体的执行代码，使得结构整体上十分清晰。具体的系统调用函数参照官方文档所述进行编写即可。
+通过阅读Pintos操作系统的官方文档，我们可以知道系统调用时会传入参数f，其类型为`struct intr_frame`，并且该指针的解引用的值为`lib/syscall-nr.h`中已经定义好的枚举变量，我们需要根据不同的枚举变量来执行不同的函数，所以这里采用一个switch选择器进行选择是十分合理的。对于不同的函数系统调用函数而言，我们第一步的工作都是根据不同的指针类型对传入的值进行检查，所以需要先写出检查函数`pointer_valid`和`char_pointer_valid`对传入的不同类型的参数进行检查。在打开文件时创建结构体`struct file f`来保存`fd`的值和文件名，所以该结构体中至少保存有文件描述符的`num`和文件名，又因为一个文件可能打开多个文件，所以该结构要作为列表中的元素，所以结构体中还应该有`list_elem`元素，并将`elem`存入当前线程的`fd_list`。在`read, filesize, write, tell, close, seek`系统调用都需要根据`fd->num`来获取`fd`，这促使我们将这一过程抽象成函数`find_fd_by_num(int num)`函数，以方便我们对代码进行检查。在执行系统调用函数之后，仍然需要对传入的参数进行检查空指针和个数检查，这就促使我们将每一个系统调用函数铲拆分成两部分，第一部分为检查参数部分，而第二部分为具体的执行代码，使得结构整体上十分清晰。具体的系统调用函数参照官方文档所述进行编写即可。
 
 ### DATA STRUCTURES
 
 > B1: Copy here the declaration of each new or changed `struct` or `struct' member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
+
+**全局变量**
 
 - [NEW] `struct lock file_lock`
   - 定义文件锁来限制多个线程同时修改同一个文件
@@ -131,31 +133,37 @@ strtok_r() 和strtok()之间的唯一区别就是save_ptr(). save_ptr() 在 stre
   - 定义新的结构体来表示一个线程打开的文件
 - [NEW] `struct thread* parent`
   - 表示线程的父进程
-- [NEW] `struct list fd_list` in `struct thread`
+
+**in `struct thread`**
+
+- [NEW] `struct list fd_list`
   - 表示线程拥有的fd列表
-- [NEW] `struct list fd_list` in `struct thread`
+- [NEW] `struct list fd_list` 
   - 表示线程拥有的fd列表
-- [NEW] `struct list child_status` in `struct thread`
+- [NEW] `struct list child_status` 
   - 表示子进程状态列表
-- [NEW] `struct file *execfile `in `struct thread`
+- [NEW] `struct file *execfile `
   - 表示线程正在执行的文件
-- [NEW] `struct child_process_status *relay_status; `in `struct thread`
+- [NEW] `struct child_process_status *relay_status`
   - 表示转发给父进程的子进程状态 
-- [NEW] `struct semaphore sema;`in `struct thread`
+- [NEW] `struct semaphore sema`
   - 表示子进程等待的信号量
-- [NEW] `struct int ret_status` in `struct child_process_status`
+
+**in `struct child_process_status` **
+
+- [NEW] `struct int ret_status`
   - 表示子进程的返回状态
-- [NEW] `struct int tid` in `struct child_process_status`
+- [NEW] `struct int tid` 
   - 表示子进程的tid
-- [NEW] `struct thread* child ` in   `struct child_process_status`
+- [NEW] `struct thread* child ` 
   - 表示指向子进程的指针
-- [NEW] `bool finish ` in   `struct child_process_status`
+- [NEW] `bool finish ` 
   - 表示子进程是否完成的状态
-- [NEW] `bool iswaited` in `struct child_process_status`
+- [NEW] `bool iswaited`
   - 表示子进程是否等待的状态
-- [NEW] `bool loaded` in `struct child_process_status`
+- [NEW] `bool loaded`
   - 表示子进程是否等待的状态
-- [NEW] `struct list_elem elem` in `struct child_process_status`
+- [NEW] `struct list_elem elem`
   - 表示子进程状态结构体的列表元素
 
 > B2: Describe how file descriptors are associated with open files. Are file descriptors unique within the entire OS or just within a single process?
@@ -431,7 +439,7 @@ syscall_wait(struct intr_frame *f)
 如果加载成功，则load赋值为1.
 
 ```c++
-	thread_current()->relay_status->loaded = 1;
+  thread_current()->relay_status->loaded = 1;
   sema_up(&thread_current()->parent->sema);
 ```
 
