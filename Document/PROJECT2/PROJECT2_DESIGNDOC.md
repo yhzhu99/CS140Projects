@@ -487,7 +487,73 @@ syscall_wait(struct intr_frame *f)
 
 ### 解决思路
 
+当不同的用户试图对同一个文件进行修改的时候，可能会发生混乱，这就需要我们对文件进行同步。简单来讲，有两种文件同步的方法，一种是实现不同用户之间的文件同步，类似于网上的共享文档一样；第二种就是当一个用户进程正在写一个文件，直接禁止其他用户对文件进行修改或者删除等等。在这里我们通过锁来实现第二种方法。
+
 ### 关键代码解析
+
+以下是创建文件的代码：
+
+```c
+void 
+syscall_create(struct intr_frame *f)
+{
+  //printf("%s syscall_create\n",thread_current()->name);
+  if(!pointer_valid(f->esp+4,2))
+  {
+    exit(-1);
+  }
+  char *file = *(char**)(f->esp+4);
+  if(!char_pointer_valid(file))
+  {
+    exit(-1);
+  }
+  unsigned initial_size = *(int *)(f->esp+8);
+  //printf("%s lock acquire\n",thread_current()->name);
+  lock_acquire(&file_lock);
+  f->eax = create(file,initial_size);
+  lock_release(&file_lock);
+  //printf("%s lock release\n",thread_current()->name);
+}
+```
+
+可以看到当执行`create`函数之前，回去获取文件锁`file_lock`，当创建完毕之后会释放锁，这就保证了同一时间只有一个用户进程去创建文件。
+
+同样的，在删除文件的这个系统调用中也同样需要先获得锁。
+
+```c
+void
+syscall_remove(struct intr_frame *f)
+{
+   if(!pointer_valid(f->esp+4,1))
+    exit(-1);
+  char *file = *(char**)(f->esp+4);
+  if(!char_pointer_valid(file))
+    exit(-1);
+  lock_acquire(&file_lock);
+  f->eax = remove(file);
+  lock_release(&file_lock);
+}
+```
+
+同样的在文件打开，文件关闭，文件长度，读取文件，文件写入，移动文件指针，`tell`函数中都要首先进行锁获取再进行操作，这就保证了文件之间的同步，因为文件锁是全局变量，整个系统中仅有一个文件锁。
+
+一些系统调用：
+
+```c
+void syscall_close(struct intr_frame *f)
+{
+  if(!pointer_valid(f->esp+4,1))
+    exit(-1);
+  lock_acquire(&file_lock);
+  close(fd);
+  lock_release(&file_lock);
+}
+```
+
+通过查阅`lock_acquire`函数的源代码可以知道锁就是`value`值为1的信号量，而信号量中会有一个线程列表来保留阻塞的线程，直到锁被释放以后列表中的线程才能再次执行。
+
+以上就实现了文件同步的所有过程。
+
 ## 核心：进程同步
 ### 解决思路
 
