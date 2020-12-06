@@ -2,7 +2,7 @@
 
 [TOC]
 
-## GROUP
+## 1. GROUP
 
 > Fill in the names and email addresses of your group members.
 
@@ -44,7 +44,7 @@ All 80 tests passed：
 multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 
 ![](img/multi-oom.png)
-## PRELIMINARIES
+## 2. PRELIMINARIES
 
 > If you have any preliminary comments on your submission, notes for the TAs, or extra credit, please give them here.
 
@@ -55,9 +55,9 @@ multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 1. 操作系统概念(原书第9版)/(美)Abraham Silberschatz等著
 2. 原仓周老师PPT中的概念和课上讲解
 
-## QUESTION 1: ARGUMENT PASSING
+## 3. QUESTION 1: ARGUMENT PASSING
 
-### 需求分析
+### 3.1. 需求分析
 
 此部分为参数传递部分。
 
@@ -67,7 +67,7 @@ multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 
 本组在该部分所需要完成的就是修改`process_execute()`，使之具备能够读取文件名，以及读取不同长度参数，并分析不同参数的功能。
 
-### 设计思路
+### 3.2. 设计思路
 
 参数传递部分的代码主要分布在`src/userprog/process.c`文件中。
 
@@ -77,7 +77,7 @@ multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 
 ![](img/arg-passing-passed.png)
 
-### DATA STRUCTURES
+### 3.3. DATA STRUCTURES
 
 > A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
@@ -99,7 +99,7 @@ multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 - [CHANGED] `start_process()`
   - implement 参数传递
 
-### ALGORITHMS
+### 3.4. ALGORITHMS
 
 > A2: Briefly describe how you implemented argument parsing.  How do you arrange for the elements of argv[] to be in the right order? How do you avoid overflowing the stack page?
 >
@@ -115,7 +115,7 @@ multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 
 我们在实施之前并没有预先计算出所需要的空间。但是，我们在实际处理溢出的时候，采用了这种办法：就是在每次使用esp之前，检查esp的有效性，并且检查所需参数所指的地址的有效性。
 
-### RATIONALE
+### 3.5. RATIONALE
 
 > A3: Why does Pintos implement strtok_r() but not strtok()?
 >
@@ -133,15 +133,15 @@ multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 
 第三点好处是，分离参数和命令以便于进行更高级的预处理。
 
-## QUESTION 2: SYSTEM CALLS
+## 4. QUESTION 2: SYSTEM CALLS
 
-### 需求分析
+### 4.1. 需求分析
 
 初始Pintos中已经有了支持加载和运行用户程序的功能，但是没有与用户进行I/O交互的功能，所以我们需要完善我们的代码来实现用户可以通过命令行的形式来运行自己想要运行的程序，并且可以在命令行中传入一定的参数来实现交互。
 
 在之前的项目当中，我们直接通过命令行使得程序直接在内核之中编译运行，这显然是不安全的。系统内核涉及到整个操作系统的安全性，尽管在我们的项目当中我们可以轻易地在内核中直接编译，但是提供程序接口给用户，来实现程序同系统直接按的通信是十分有必要的。典型的系统调用有`halt`, `exit`, `exec`, `wait`, `create`, `remove`, `open`, `filesize`, read, write, `seek`, `tell`, `close`等，这些也是文档中要求我们完成的部分。
 
-### 设计思路
+### 4.2. 设计思路
 
 通过阅读Pintos操作系统的官方文档，我们可以知道系统调用时会传入参数`f`，其类型为`struct intr_frame`，并且该指针的解引用的值为`lib/syscall-nr.h`中已经定义好的枚举变量，我们需要根据不同的枚举变量来执行不同的函数，所以这里采用一个switch选择器进行选择是十分合理的。
 
@@ -149,7 +149,7 @@ multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 
 在`read`, `filesize`, `write`, `tell`, `close`, `seek`系统调用时，都需要根据`fd->num`来获取`fd`，这促使我们将这一过程抽象成函数`find_fd_by_num(int num)`函数，以方便我们对代码进行检查。在执行系统调用函数之后，仍然需要对传入的参数进行检查空指针和个数检查，这就促使我们将每一个系统调用函数拆分成两部分:第一部分为检查参数部分，而第二部分为具体的执行代码，使得结构整体上十分清晰。具体的系统调用函数参照官方文档所述进行编写即可。
 
-### DATA STRUCTURES
+### 4.3. DATA STRUCTURES
 
 > B1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
@@ -204,7 +204,7 @@ multi-oom测试：题目要求创建至少30个进程，我们实现了53个。
 
 文件描述符通过维护一个唯一的非负整数且不为0和1的方法来对文件进行联系。我们需要保存文件和`fd`之间对应关系，这就促使我们将其打包成一个结构体。同时使打开的文件是属于某个进程的，这就需要我们来定义一个列表来对这个整体进行维护，同时在整体中出入`struct list_elem elem`元素即可实现列表。文件描述符在整个OS中都是唯一的，因为我们这里在`syscall.c`中维护一个起始值为2的全局变量(0和1是console)，每一次打开一个文件就`fd`加1，这样就简单实现了文件描述符的唯一性。
 
-### ALGORITHMS
+### 4.4. ALGORITHMS
 
 > B3: Describe your code for reading and writing user data from the kernel.
 >
@@ -425,7 +425,7 @@ syscall_wait(struct intr_frame *f){
 
 这就保证了执行完write操作后一定能够把锁释放掉。
 
-### SYNCHRONIZATION
+### 4.5. SYNCHRONIZATION
 
 > B7: The "exec" system call returns -1 if loading the new executable fails, so it cannot return before the new executable has completed loading.  How does your code ensure this?  How is the load success/failure status passed back to the thread that calls "exec"?
 >
@@ -488,7 +488,7 @@ sema_up(&thread_current()->parent->sema);
 
 在C exit之后，没有特殊情况，因为C exit之后会释放其拥有的所有资源并且设置线程对应的`status`结构体中的元素。
 
-### RATIONALE
+### 4.6. RATIONALE
 
 > B9: Why did you choose to implement access to user memory from the kernel in the way that you did?
 >
@@ -515,13 +515,13 @@ sema_up(&thread_current()->parent->sema);
 
 我们没有对以上映射修改。
 
-## 核心：文件同步
+## 5. 核心：文件同步
 
-### 解决思路
+### 5.1. 解决思路
 
 当不同的用户试图对同一个文件进行修改的时候，可能会发生混乱，这就需要我们对文件进行同步。简单来讲，有两种文件同步的方法：一种是实现不同用户之间的文件同步，类似于网上的共享文档一样；第二种就是当一个用户进程正在写一个文件，直接禁止其他用户对文件进行修改或者删除等等。在这里我们通过锁来实现第二种方法。
 
-### 关键代码解析
+### 5.2. 关键代码解析
 
 以下是创建文件的代码：
 
@@ -583,10 +583,10 @@ void syscall_close(struct intr_frame *f)
 
 以上就实现了文件同步的所有过程。
 
-## 核心：进程同步
-### 解决思路
+## 6. 核心：进程同步
+### 6.1. 解决思路
 
-#### 初版
+#### 6.1.1. 初版
 
 在初级版本中，我们考虑到，在进行本项目的过程中，有着进程同步的需求，而这个需求无疑是十分必要的。
 
@@ -615,7 +615,7 @@ tid_t parent_tid; /* 父进程的tid */
 
 当然，这种直观的方法存在某些问题。这些问题和解决这些问题的方法，将在下一部分重构中，详细的讲解。
 
-#### 重构
+#### 6.1.2. 重构
 
 考虑以下情况：父进程在成功创建完子进程后，子进程获得了CPU资源，并且执行到底，成功退出，并且调度之后该进程所有信息被释放。此时父进程并没有进入`process_wait()`，那么父进程应该如何获得子进程的退出状态呢？我们考虑使用以下方式来解决这样的问题。对于每一个进程开辟一块新的空间，保存该进程作为子进程传给父进程的子进程状态`child_process_status`。这一状态维护在父进程的`child_status`列表中。子进程退出之后，只释放进程本身的信息，并不释放`child_process_status`中的信息。这样在子进程退出之后，父进程仍然能够在自己的`child_status`列表中找到该子进程的`child_process_status`，获得该子进程的退出信息。
 
@@ -629,7 +629,7 @@ tid_t parent_tid; /* 父进程的tid */
 
 最后是对僵死进程的处理。由于进程`exit`后，其`finish`置为`true`，要唤醒父亲，如果该进程为僵死进程，它没有父亲，则唤醒父亲的操作会引用出错(指针指向空的区域)，会造成`page fault`。所以每一次释放掉僵死进程所代表的`child`进程时，要将其指向的父进程的空间(`struct thread *parent`)置为`NULL`。这样便可以在`exit`时做判断：如果我有父亲，则唤醒，把需要传递的值赋给`relay_status`，即相当于父进程的`child_status`（我完成了，我的返回状态是什么，再把父亲给唤醒）
 
-### 关键代码解析
+### 6.2. 关键代码解析
 
 **in `thread.h`**
 
@@ -790,7 +790,7 @@ thread_exit (void){
 }
 ```
 
-## SURVEY QUESTIONS
+## 7. SURVEY QUESTIONS
 
 Answering these questions is optional, but it will help us improve the course in future quarters. Feel free to tell us anything you want--these questions are just to spur your thoughts. You may also choose to respond anonymously in the course evaluations at the end of the quarter.
 
