@@ -29,7 +29,7 @@ frame_init (void)
   while ((base = palloc_get_page (PAL_USER)) != NULL) 
     {
       struct frame *f = &frames[frame_cnt++];
-      lock_init (&f->frame_lock);
+      lock_init (&f->lock);
       f->base = base;
       f->page = NULL;
     }
@@ -48,7 +48,7 @@ try_frame_alloc_and_lock (struct page *page)
   for (i = 0; i < frame_cnt; i++)
     {
       struct frame *f = &frames[i];
-      if (!lock_try_acquire (&f->frame_lock))
+      if (!lock_try_acquire (&f->lock))
         continue;
       if (f->page == NULL) 
         {
@@ -56,7 +56,7 @@ try_frame_alloc_and_lock (struct page *page)
           lock_release (&scan_lock);
           return f;
         } 
-      lock_release (&f->frame_lock);
+      lock_release (&f->lock);
     }
 
   /* No free frame.  Find a frame to evict. */
@@ -67,7 +67,7 @@ try_frame_alloc_and_lock (struct page *page)
       if (++hand >= frame_cnt)
         hand = 0;
 
-      if (!lock_try_acquire (&f->frame_lock))
+      if (!lock_try_acquire (&f->lock))
         continue;
 
       if (f->page == NULL) 
@@ -79,7 +79,7 @@ try_frame_alloc_and_lock (struct page *page)
 
       if (page_accessed_recently (f->page)) 
         {
-          lock_release (&f->frame_lock);
+          lock_release (&f->lock);
           continue;
         }
           
@@ -88,7 +88,7 @@ try_frame_alloc_and_lock (struct page *page)
       /* Evict this frame. */
       if (!page_out (f->page))
         {
-          lock_release (&f->frame_lock);
+          lock_release (&f->lock);
           return NULL;
         }
 
@@ -113,7 +113,7 @@ frame_alloc_and_lock (struct page *page)
       struct frame *f = try_frame_alloc_and_lock (page);
       if (f != NULL) 
         {
-          ASSERT (lock_held_by_current_thread (&f->frame_lock));
+          ASSERT (lock_held_by_current_thread (&f->lock));
           return f; 
         }
       timer_msleep (1000);
@@ -131,10 +131,10 @@ frame_lock (struct page *p)
   struct frame *f = p->frame;
   if (f != NULL) 
     {
-      lock_acquire (&f->frame_lock);
+      lock_acquire (&f->lock);
       if (f != p->frame)
         {
-          lock_release (&f->frame_lock);
+          lock_release (&f->lock);
           ASSERT (p->frame == NULL); 
         } 
     }

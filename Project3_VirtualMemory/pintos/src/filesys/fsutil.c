@@ -24,7 +24,6 @@ fsutil_ls (char **argv UNUSED)
     PANIC ("root dir open failed");
   while (dir_readdir (dir, name))
     printf ("%s\n", name);
-  dir_close (dir);
   printf ("End of listing.\n");
 }
 
@@ -215,7 +214,7 @@ fsutil_append (char **argv)
      them, though, in case we have more files to append. */
   memset (buffer, 0, BLOCK_SECTOR_SIZE);
   block_write (dst, sector, buffer);
-  block_write (dst, sector + 1, buffer);
+  block_write (dst, sector, buffer + 1);
 
   /* Finish up. */
   file_close (src);

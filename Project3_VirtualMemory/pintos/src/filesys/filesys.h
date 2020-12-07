@@ -9,7 +9,7 @@
 #define ROOT_DIR_SECTOR 1       /* Root directory file inode sector. */
 
 /* Block device that contains the file system. */
-extern struct block *fs_device;
+struct block *fs_device;
 
 void filesys_init (bool format);
 void filesys_done (void);
