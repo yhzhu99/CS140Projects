@@ -27,8 +27,7 @@ Additional notes and modifications for Project 1:
 
 - A common mistake students make throughout the Pintos projects is to use `malloc` carelessly. If you call `malloc`, you must check the result to make sure the system did not run out of memory (and you must do something reasonable if memory does run out). In addition, you must be sure that any memory you allocate is eventually freed.
 
-方式一的评测依据包括设计方案、文档质量和测试用例的通过数。采用这种方式，除提交能够直接编译并运行的完整项目源代码外，同时提交的文档第（1）部分为小组成员学号姓名及各自在本实验的贡献百分比，截图github或其他所采用平台的各成员工作总结。然后后续内容按实验规定的文档模板编写即可。选用这种方式的小组， 
-源代码需要能通过查重检测，重合度高的源码视为作弊，相应取消本实验成绩。
+方式一的评测依据包括设计方案、文档质量和测试用例的通过数。采用这种方式，除提交能够直接编译并运行的完整项目源代码外，同时提交的文档第（1）部分为小组成员学号姓名及各自在本实验的贡献百分比，截图github或其他所采用平台的各成员工作总结。然后后续内容按实验规定的文档模板编写即可。选用这种方式的小组，源代码需要能通过查重检测，重合度高的源码视为作弊，相应取消本实验成绩。
 
 方式二的评测依据主要是分析文档中分析相关函数的个数和分析质量，也参考源码编译后测试用例的通过数。采用这种方式，除提交能够直接编译并运行的完整项目源代码外，同时提交的分析文档内容包括：
 
