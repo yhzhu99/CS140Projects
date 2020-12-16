@@ -26,6 +26,8 @@
 
 > 样例通过情况
 
+![](img/init-test.png)
+
 ## PRELIMINARIES
 
 > If you have any preliminary comments on your submission, notes for the TAs, or extra credit, please give them here.
@@ -39,15 +41,32 @@
 
 ## QUESTION 1: PAGE TABLE MANAGEMENT
 
-### 需求分析
+### DATA STRUCTURES
 
-### 函数的调用关系图
-### 数据结构的分析说明
+> A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
-### 函数流程图的分析说明
+在本部分中，添加的新的数据结构或者是修改已有的数据结构。有：
+
+**in `thread.h`**
+
+- [NEW] `struct list child_list`
+  - 定义子进程列表来储存父进程的所有子进程
+- [NEW] `struct list_elem cpelem`
+  - 定义`child_list`的`elem`
+- [NEW] `tid_t parent_tid`
+  - 定义父进程的`tid`
+
+**in `process.c`**
+
+- [CHANGED] `process_execute()`
+  - implement starts a new thread running a user program loaded from FILENAME.
+- [CHANGED] `start_process()`
+  - implement 参数传递
+
 ### ALGORITHMS
 
 > A2: In a few paragraphs, describe your code for accessing the data stored in the SPT about a given page.
+
 
 
 > A3: How does your code coordinate accessed and dirty bits between kernel and user virtual addresses that alias a single frame, or alternatively how do you avoid the issue?
@@ -62,12 +81,55 @@
 
 ## QUESTION 2: PAGING TO AND FROM DISK
 
-### 需求分析
+### DATA STRUCTURES
 
-### 函数的调用关系图
-### 数据结构的分析说明
+> B1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
-### 函数流程图的分析说明
+**全局变量**
+
+- [NEW] `struct lock file_lock`
+  - 定义文件锁来限制多个线程同时修改同一个文件
+- [NEW] `typedef int pid_t`
+  - 定义线程标识号的类型
+- [NEW] `int fd_num`
+  - 定义非负整数file descriptor
+- [NEW] `struct fd`
+  - 定义新的结构体来表示一个线程打开的文件
+- [NEW] `struct thread* parent`
+  - 表示线程的父进程
+
+**in `struct thread`**
+
+- [NEW] `struct list fd_list`
+  - 表示线程拥有的fd列表
+- [NEW] `struct list fd_list`
+  - 表示线程拥有的fd列表
+- [NEW] `struct list child_status`
+  - 表示子进程状态列表
+- [NEW] `struct file *execfile`
+  - 表示线程正在执行的文件
+- [NEW] `struct child_process_status *relay_status`
+  - 表示转发给父进程的子进程状态
+- [NEW] `struct semaphore sema`
+  - 表示子进程等待的信号量
+
+**in `struct child_process_status`**
+
+- [NEW] `struct int ret_status`
+  - 表示子进程的返回状态
+- [NEW] `struct int tid`
+  - 表示子进程的tid
+- [NEW] `struct thread* child`
+  - 表示指向子进程的指针
+- [NEW] `bool finish`
+  - 表示子进程是否完成的状态
+- [NEW] `bool iswaited`
+  - 表示子进程是否等待的状态
+- [NEW] `bool loaded`
+  - 表示子进程是否等待的状态
+- [NEW] `struct list_elem elem`
+  - 表示子进程状态结构体的列表元素
+
 ### ALGORITHMS
 
 > B2: When a frame is required but none is free, some frame must be evicted.  Describe your code for choosing a frame to evict.
@@ -91,14 +153,6 @@
 > B9: A single lock for the whole VM system would make synchronization easy, but limit parallelism.  On the other hand, using many locks complicates synchronization and raises the possibility for deadlock but allows for high parallelism. Explain where your design falls along this continuum and why you chose to design it this way.
 
 ## QUESTION 3: MEMORY MAPPED FILES
-
-### 需求分析
-
-### 函数的调用关系图
-### 数据结构的分析说明
-
-### 函数流程图的分析说明
-
 ### ALGORITHMS
 
 > C2: Describe how memory mapped files integrate into your virtual memory subsystem.  Explain how the page fault and eviction processes differ between swap pages and other pages.
@@ -115,7 +169,7 @@ Answering these questions is optional, but it will help us improve the course in
 
 > In your opinion, was this assignment, or any one of the three problems in it, too easy or too hard?  Did it take too long or too little time?
 
-这个作业对我们而言非常难。我们基本上整整7天其他什么作业都没做，只用来理解和写Pintos。
+这个作业对我们而言非常难。我们基本上整整10天其他什么作业都没做，只用来理解和写Pintos。
 
 > Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design?
 
@@ -123,7 +177,7 @@ Answering these questions is optional, but it will help us improve the course in
 
 > Is there some particular fact or hint we should give students in future quarters to help them solve the problems?  Conversely, did you find any of our guidance to be misleading?
 
-实验指导书已经足够明确，我们组在做本次Project 2的唯一参考基本上就是该实验指导书。
+实验指导书已经足够明确，我们组在做本次Project 3的唯一参考基本上就是该实验指导书。
 
 > Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects?
 

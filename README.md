@@ -27,9 +27,17 @@ Additional notes and modifications for Project 1:
 
 See the Pintos documentation for details on this project:
 
-- [Assignment](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/pintos_2.html)
-- [Frequently asked questions](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/pintos_2.html#Project%201%20FAQ)
-- [Template for design document](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/threads.tmpl)
+- [Assignment](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/pintos_3.html)
+- [Frequently asked questions](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/pintos_3.html#Project%202%20FAQ)
+- [Template for design document](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/userprog.tmpl)
+
+### Project 3: Virtual Memory
+
+See the Pintos documentation for details on this project:
+
+- [Assignment](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/pintos_4.html)
+- [Frequently asked questions](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/pintos_4.html#Project%203%20FAQ)
+- [Template for design document](http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/vm.tmpl)
 
 ## 评分标准
 
