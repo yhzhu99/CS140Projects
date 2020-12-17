@@ -28,11 +28,22 @@
 
 ![](img/init-test.png)
 
+113个测试点中，通过了113-26=87个点（87/113*100%=76.99%）
+
 ## PRELIMINARIES
 
 > If you have any preliminary comments on your submission, notes for the TAs, or extra credit, please give them here.
 
 我们该项目的Github仓库为私有仓库，如有需要，请联系我们。
+
+由于我们并未完全实现Project3的所有内容，以下DesignDoc中的问题将非常坦诚地仅回答我们已实现的部分或是对该部分的理解。
+
+需要注意的是，我们的代码**没有参考**任何网络上的现成代码，完全基于我们的Project2项目。
+
+**给助教的提醒：**
+
+- 如果某些组Project2是以方式二形式做的，而以方式一完成了Project3，则我有90%+的把握确信他们是抄的。
+- 如果某些组Project3与Project2都以方式一做，然而Project3的代码并不基于Project2（Project2中的实现方式多样——用一个信号量同步/用两个信号量同步/使用管道来同步等，可以看`thread.h`中定义的数据结构），则我同样有90%+的把握确信他们是抄的。
 
 > Please cite any offline or online sources you consulted while preparing your submission, other than the Pintos documentation, course text, lecture notes, and course staff.
 
