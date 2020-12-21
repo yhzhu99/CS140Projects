@@ -68,7 +68,6 @@
 - 如果`page_zero_bytes`等于`PGSIZE`，则根本不需要从磁盘读取页面，因为它全为零。您应该通过在首页错误时创建一个由全零组成的新页面来处理此类页面。
 - 否则，`page_read_bytes`和`page_zero_bytes`都不等于`PGSIZE`。在这种情况下，将从底层文件中读取页面的初始部分，并将其余部分清零。
 
-
 ### DATA STRUCTURES
 
 > A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
@@ -204,16 +203,6 @@
 关闭或删除文件不会取消映射任何映射。创建后，按照Unix约定，映射将一直有效，直到调用munmap或进程退出为止。有关更多信息，请参见删除打开的文件。您应该使用file_reopen函数为文件的每个映射获取对文件的单独且独立的引用。
 
 如果两个或多个进程映射同一文件，则不要求它们看到一致的数据。Unix通过使两个映射共享相同的物理页面来处理此问题，但是mmap系统调用还具有一个参数，允许客户端指定页面是共享页面还是私有页面（即写时复制）。
-
-### ALGORITHMS
-
-> C2: Describe how memory mapped files integrate into your virtual memory subsystem.  Explain how the page fault and eviction processes differ between swap pages and other pages.
-
-> C3: Explain how you determine whether a new file mapping overlaps any existing segment.
-
-### RATIONALE
-
-> C4: Mappings created with "mmap" have similar semantics to those of data demand-paged from executables, except that "mmap" mappings are written back to their original files, not to swap.  This implies that much of their implementation can be shared. Explain why your implementation either does or does not share much of the code for the two situations.
 
 ## SURVEY QUESTIONS
 
