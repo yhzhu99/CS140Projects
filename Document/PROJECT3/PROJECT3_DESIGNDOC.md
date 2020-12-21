@@ -142,10 +142,12 @@
 
 > A3: How does your code coordinate accessed and dirty bits between kernel and user virtual addresses that alias a single frame, or alternatively how do you avoid the issue?
 
+首先找到用户进程虚拟地址的页面，通过找到未使用的可用页面，或释放最近未访问过的页面（通过逐出内存中的关联页面）来解决这一个问题。
 ### SYNCHRONIZATION
 
 > A4: When two user processes both need a new frame at the same time, how are races avoided?
-
+ 
+当用户进程获取内存时，用锁机制来避免。
 ### RATIONALE
 
 > A5: Why did you choose the data structure(s) that you did for representing virtual-to-physical mappings?
@@ -206,47 +208,36 @@
 
 > B2: When a frame is required but none is free, some frame must be evicted.  Describe your code for choosing a frame to evict.
 
+首先我们的算法应该找到所有未曾使用的页，如果所有页面都已经被使用过（已存在映射），那么算法应该保证能够驱逐出一个页面，使得我们的页帧可以被使用。我们将最久远的未曾被使用过的页帧作为被替换的对象。
+
 > B3: When a process P obtains a frame that was previously used by a process Q, how do you adjust the page table (and any other data structures) to reflect the frame Q no longer has?
 
+改变进程的栈指针即可。
+
 > B4: Explain your heuristic for deciding whether a page fault for an invalid virtual address should cause the stack to be extended into the page that faulted.
+
+要防止此类页面错误，需要在其中进行访问的代码与页面的逐出代码之间进行协作。例如，可以扩展框架表以记录框架中包含的页面何时不能被驱逐。
 
 ### SYNCHRONIZATION
 
 > B5: Explain the basics of your VM synchronization design. In particular, explain how it prevents deadlock.  (Refer to the textbook for an explanation of the necessary conditions for deadlock.)
 
+很遗憾，由于我们尚并未完成这一部分。
 > B6: A page fault in process P can cause another process Q's frame to be evicted.  How do you ensure that Q cannot access or modify the page during the eviction process?  How do you avoid a race between P evicting Q's frame and Q faulting the page back in?
+
+当进程Q的页帧的驱逐之前，会根据其Dirty Bit写或者不写入到可执行文件中。在被驱逐之后，我们会在扩展表中表及进程的PID用以表示哪个进程正在使用页帧，当请求修改的进程的PID与表中不一致的时候就会拒绝修改。
 
 > B7: Suppose a page fault in process P causes a page to be read from the file system or swap.  How do you ensure that a second process Q cannot interfere by e.g. attempting to evict the frame while it is still being read in?
 
+很遗憾，由于我们尚并未完成这一部分。
 > B8: Explain how you handle access to paged-out pages that occur during system calls.  Do you use page faults to bring in pages (as in user programs), or do you have a mechanism for "locking" frames into physical memory, or do you use some other design?  How do you gracefully handle attempted accesses to invalid virtual addresses?
+
+很遗憾，由于我们尚并未完成这一部分。
 
 ### RATIONALE
 
 > B9: A single lock for the whole VM system would make synchronization easy, but limit parallelism.  On the other hand, using many locks complicates synchronization and raises the possibility for deadlock but allows for high parallelism. Explain where your design falls along this continuum and why you chose to design it this way.
 
-## QUESTION 3: MEMORY MAPPED FILES
-
-## 需求分析
-
-实现内存映射文件，包括以下系统调用。
-
-- 系统调用：`mapid_t mmap(int void *addr)`
-  - 将以fd打开的文件映射到进程的虚拟地址空间。整个文件被映射到从addr开始的连续虚拟页面中。
-  - 您的VM系统必须延迟加载mmap区域中的页面，并将mmaped文件本身用作映射的后备存储。也就是说，逐出mmap映射的页面会将其写回到映射的文件中。
-  - 如果文件的长度不是PGSIZE的倍数，则最终映射页中的某些字节会“伸出”到文件末尾。当页面从文件系统中出现故障时，将这些字节设置为零，而当页面写回到磁盘时将其丢弃。
-  - 如果成功，此函数将返回一个“映射ID”，该ID唯一标识进程中的映射。失败时，它必须返回-1，否则不应为有效的映射ID，并且进程的映射必须保持不变。
-  - 如果以fd打开的文件的长度为零字节，则对mmap的调用可能会失败。如果addr不是页面对齐的，或者映射的页面范围与任何现有的映射页面集（包括堆栈或可执行加载时映射的页面）重叠，则必须失败。如果addr为0，它也必须失败，因为某些Pintos代码假定未映射虚拟页面0。最后，代表控制台输入和输出的文件描述符0和1是不可映射的。
-- 系统调用：`void munmap (mapid_t mapping)`
-  - 取消映射由映射指定的映射，该映射必须是由尚未取消映射的同一进程先前调用mmap返回的映射ID。
-  - 进程退出时，无论是通过退出还是通过任何其他方式，都将隐式取消对所有映射的映射。当取消映射时，无论是隐式还是显式地，该进程写入的所有页面都将被写回到文件中，而未写入的页面则不能被写入。然后，将页面从进程的虚拟页面列表中删除。
-  - 关闭或删除文件不会取消映射任何映射。创建后，按照Unix约定，映射将一直有效，直到调用munmap或进程退出为止。有关更多信息，请参见删除打开的文件。您应该使用file_reopen函数为文件的每个映射获取对文件的单独且独立的引用。
-  - 如果两个或多个进程映射同一文件，则不要求它们看到一致的数据。 Unix通过使两个映射共享相同的物理页面来处理此问题，但是mmap系统调用还具有一个参数，允许客户端指定页面是共享页面还是私有页面（即写时复制）。
-
-进程退出时，无论是通过退出还是通过任何其他方式，都将隐式取消对所有映射的映射。 当取消映射时，无论是隐式还是显式，由该进程写入的所有页面都将被写回到该文件中，而未写入的页面则必须不被写入。 然后，将页面从进程的虚拟页面列表中删除。
-
-关闭或删除文件不会取消映射任何映射。创建后，按照Unix约定，映射将一直有效，直到调用munmap或进程退出为止。有关更多信息，请参见删除打开的文件。您应该使用file_reopen函数为文件的每个映射获取对文件的单独且独立的引用。
-
-如果两个或多个进程映射同一文件，则不要求它们看到一致的数据。Unix通过使两个映射共享相同的物理页面来处理此问题，但是mmap系统调用还具有一个参数，允许客户端指定页面是共享页面还是私有页面（即写时复制）。
 
 ## SURVEY QUESTIONS
 
