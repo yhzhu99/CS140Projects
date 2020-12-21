@@ -52,6 +52,23 @@
 
 ## QUESTION 1: PAGE TABLE MANAGEMENT
 
+### 需求分析
+
+**分页部分：**
+
+为从可执行文件加载的段实现分页。所有这些页面都应延迟加载，即仅在内核拦截它们的页面错误时才加载。逐出后，应将自加载以来已修改的页面（例如，如“脏位”所示）写入交换页。未经修改的页面（包括只读页面）绝对不能写入交换位置，因为它们始终可以从可执行文件中读取。
+
+实现近似LRU的全局页面替换算法。您的算法至少应具有“第二次机会”或“时钟”算法的简单变体。
+
+您的设计应考虑并行性。如果一页错误需要I/O，则与此同时，没有错误的进程应继续执行，而其他不需要I/O的页面错误应能够完成。这将需要一些同步工作。
+
+您需要修改程序加载器的核心，即`userprog/process.c`中`load_segment()`中的循环。每次循环时，`page_read_bytes`都会从可执行文件中读取要读取的字节数，`page_zero_bytes`会在读取的字节后接收初始化为零的字节数。这两个总和为`PGSIZE(4,096)`。页面的处理取决于以下变量的值：
+
+- 如果`page_read_bytes`等于`PGSIZE`，则应在首次访问时从基础文件中请求对页面进行分页。
+- 如果`page_zero_bytes`等于`PGSIZE`，则根本不需要从磁盘读取页面，因为它全为零。您应该通过在首页错误时创建一个由全零组成的新页面来处理此类页面。
+- 否则，`page_read_bytes`和`page_zero_bytes`都不等于`PGSIZE`。在这种情况下，将从底层文件中读取页面的初始部分，并将其余部分清零。
+
+
 ### DATA STRUCTURES
 
 > A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
@@ -78,7 +95,7 @@
 
 > A2: In a few paragraphs, describe your code for accessing the data stored in the SPT about a given page.
 
-
+很遗憾，由于我们尚并未完成这一部分。
 
 > A3: How does your code coordinate accessed and dirty bits between kernel and user virtual addresses that alias a single frame, or alternatively how do you avoid the issue?
 
@@ -91,6 +108,7 @@
 > A5: Why did you choose the data structure(s) that you did for representing virtual-to-physical mappings?
 
 ## QUESTION 2: PAGING TO AND FROM DISK
+
 
 ### DATA STRUCTURES
 
@@ -164,6 +182,29 @@
 > B9: A single lock for the whole VM system would make synchronization easy, but limit parallelism.  On the other hand, using many locks complicates synchronization and raises the possibility for deadlock but allows for high parallelism. Explain where your design falls along this continuum and why you chose to design it this way.
 
 ## QUESTION 3: MEMORY MAPPED FILES
+
+## 需求分析
+
+实现内存映射文件，包括以下系统调用。
+
+- 系统调用：`mapid_t mmap(int void *addr)`
+  - 将以fd打开的文件映射到进程的虚拟地址空间。整个文件被映射到从addr开始的连续虚拟页面中。
+  - 您的VM系统必须延迟加载mmap区域中的页面，并将mmaped文件本身用作映射的后备存储。也就是说，逐出mmap映射的页面会将其写回到映射的文件中。
+  - 如果文件的长度不是PGSIZE的倍数，则最终映射页中的某些字节会“伸出”到文件末尾。当页面从文件系统中出现故障时，将这些字节设置为零，而当页面写回到磁盘时将其丢弃。
+  - 如果成功，此函数将返回一个“映射ID”，该ID唯一标识进程中的映射。失败时，它必须返回-1，否则不应为有效的映射ID，并且进程的映射必须保持不变。
+  - 如果以fd打开的文件的长度为零字节，则对mmap的调用可能会失败。如果addr不是页面对齐的，或者映射的页面范围与任何现有的映射页面集（包括堆栈或可执行加载时映射的页面）重叠，则必须失败。如果addr为0，它也必须失败，因为某些Pintos代码假定未映射虚拟页面0。最后，代表控制台输入和输出的文件描述符0和1是不可映射的。
+- 系统调用：`void munmap (mapid_t mapping)`
+  - 取消映射由映射指定的映射，该映射必须是由尚未取消映射的同一进程先前调用mmap返回的映射ID。
+  - 进程退出时，无论是通过退出还是通过任何其他方式，都将隐式取消对所有映射的映射。当取消映射时，无论是隐式还是显式地，该进程写入的所有页面都将被写回到文件中，而未写入的页面则不能被写入。然后，将页面从进程的虚拟页面列表中删除。
+  - 关闭或删除文件不会取消映射任何映射。创建后，按照Unix约定，映射将一直有效，直到调用munmap或进程退出为止。有关更多信息，请参见删除打开的文件。您应该使用file_reopen函数为文件的每个映射获取对文件的单独且独立的引用。
+  - 如果两个或多个进程映射同一文件，则不要求它们看到一致的数据。 Unix通过使两个映射共享相同的物理页面来处理此问题，但是mmap系统调用还具有一个参数，允许客户端指定页面是共享页面还是私有页面（即写时复制）。
+
+进程退出时，无论是通过退出还是通过任何其他方式，都将隐式取消对所有映射的映射。 当取消映射时，无论是隐式还是显式，由该进程写入的所有页面都将被写回到该文件中，而未写入的页面则必须不被写入。 然后，将页面从进程的虚拟页面列表中删除。
+
+关闭或删除文件不会取消映射任何映射。创建后，按照Unix约定，映射将一直有效，直到调用munmap或进程退出为止。有关更多信息，请参见删除打开的文件。您应该使用file_reopen函数为文件的每个映射获取对文件的单独且独立的引用。
+
+如果两个或多个进程映射同一文件，则不要求它们看到一致的数据。Unix通过使两个映射共享相同的物理页面来处理此问题，但是mmap系统调用还具有一个参数，允许客户端指定页面是共享页面还是私有页面（即写时复制）。
+
 ### ALGORITHMS
 
 > C2: Describe how memory mapped files integrate into your virtual memory subsystem.  Explain how the page fault and eviction processes differ between swap pages and other pages.
