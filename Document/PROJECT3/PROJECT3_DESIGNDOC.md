@@ -153,11 +153,12 @@
 > A3: How does your code coordinate accessed and dirty bits between kernel and user virtual addresses that alias a single frame, or alternatively how do you avoid the issue?
 
 首先，找到用户进程虚拟地址的页面，通过找到未使用的可用页面，或释放最近未访问过的页面（通过逐出内存中的关联页面）来解决这一个问题。
+
 ### SYNCHRONIZATION
 
 > A4: When two user processes both need a new frame at the same time, how are races avoided?
 
-当用户进程获取内存时，用锁机制来避免。
+当用户进程获取内存时，用锁机制来避免。其中，每一帧都有自己的锁，表示它当前的状态是否被占用。
 
 ### RATIONALE
 
@@ -220,7 +221,11 @@
 
 > B2: When a frame is required but none is free, some frame must be evicted.  Describe your code for choosing a frame to evict.
 
-首先，我们的算法应该找到所有未曾使用的页，如果所有页面都已经被使用过（已存在映射），那么算法应该保证能够驱逐出一个页面，使得我们的页帧可以被使用。我们将最久远的未曾被使用过的页帧作为被替换的对象。
+首先，我们的算法应该找到所有未曾使用的页。如果所有页面都已经被使用过（已存在映射），那么算法应该保证能够驱逐出一个页面，使得我们的页帧可以被使用。
+
+我们将最近的未被访问的第一帧作为被替换的对象。
+
+如果通过遍历，发现所有的帧最近都已被访问过，则重复遍历，直至出现有效帧。
 
 > B3: When a process P obtains a frame that was previously used by a process Q, how do you adjust the page table (and any other data structures) to reflect the frame Q no longer has?
 
@@ -228,13 +233,13 @@
 
 > B4: Explain your heuristic for deciding whether a page fault for an invalid virtual address should cause the stack to be extended into the page that faulted.
 
-要防止此类页面错误，需要在其中进行访问的代码与页面的逐出代码之间进行协作。例如，可以扩展框架表以记录框架中包含的页面何时不能被驱逐。
+要防止此类页错误，需要做一些检查：考察esp-32处。当发现此类错误时，我们认为，可以扩展页框来解决。
 
 ### SYNCHRONIZATION
 
 > B5: Explain the basics of your VM synchronization design. In particular, explain how it prevents deadlock.  (Refer to the textbook for an explanation of the necessary conditions for deadlock.)
 
-很遗憾，由于我们尚并未完成这一部分。
+很遗憾，由于我们尚并未完全完成这一部分。在我们的设想中，frame table和swap table之间都会有锁。当页驱逐时，各个进程都可能会用到这些表，因此需要在这些表中记录，并对内容进行同步。
 
 > B6: A page fault in process P can cause another process Q's frame to be evicted.  How do you ensure that Q cannot access or modify the page during the eviction process?  How do you avoid a race between P evicting Q's frame and Q faulting the page back in?
 
