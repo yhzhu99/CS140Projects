@@ -229,7 +229,7 @@
 
 > B3: When a process P obtains a frame that was previously used by a process Q, how do you adjust the page table (and any other data structures) to reflect the frame Q no longer has?
 
-改变进程的栈指针即可。
+在选择Q的帧时，我们可以知道它所映射的用户虚拟地址，从而获得Q进程的数据结构。通过`pagedir_clear_page()`方法删除对该Q frame的引用。
 
 > B4: Explain your heuristic for deciding whether a page fault for an invalid virtual address should cause the stack to be extended into the page that faulted.
 
@@ -243,15 +243,17 @@
 
 > B6: A page fault in process P can cause another process Q's frame to be evicted.  How do you ensure that Q cannot access or modify the page during the eviction process?  How do you avoid a race between P evicting Q's frame and Q faulting the page back in?
 
-当进程Q的页帧的驱逐之前，会根据其Dirty Bit写或者不写入到可执行文件中。在被驱逐之后，我们会在扩展表中表及进程的PID用以表示哪个进程正在使用页帧，当请求修改的进程的PID与表中不一致的时候就会拒绝修改。
+我们试图为每个补充页表创建锁。当进程Q的页帧的驱逐之前，会根据其Dirty Bit写或者不写入到可执行文件中。在被驱逐之后，我们会在扩展表中表及进程的PID用以表示哪个进程正在使用页帧，当请求修改的进程的PID与表中不一致的时候就会拒绝修改。
 
 > B7: Suppose a page fault in process P causes a page to be read from the file system or swap.  How do you ensure that a second process Q cannot interfere by e.g. attempting to evict the frame while it is still being read in?
 
-很遗憾，由于我们尚并未完成这一部分。
+很遗憾，由于我们尚并未完全完成这一部分。在我们的设想中，通过为frame table entry创建一个是否可以撤销属性来记录其状态：当将要从文件系统中读取或交换时，设为false，当被判断为false时，防止其被evict。
 
 > B8: Explain how you handle access to paged-out pages that occur during system calls.  Do you use page faults to bring in pages (as in user programs), or do you have a mechanism for "locking" frames into physical memory, or do you use some other design?  How do you gracefully handle attempted accesses to invalid virtual addresses?
 
-很遗憾，由于我们尚并未完成这一部分。
+很遗憾，由于我们尚并未完全完成这一部分。在我们的设想中，我们认为，可以通过增加判别位作标记来解决。如页面的逐出标记的true和false可在检查时被得知，当进程看到这些标志时便会去考虑是否要evict。
+
+对于无效地址，和Project2一样，我们选择对地址进行预检查，如果不符合要求，则拒绝访问，适时退出。
 
 ### RATIONALE
 
