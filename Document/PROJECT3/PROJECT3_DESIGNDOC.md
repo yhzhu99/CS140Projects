@@ -2,7 +2,7 @@
 
 [TOC]
 
-## GROUP
+## 1. GROUP
 
 > Fill in the names and email addresses of your group members.
 
@@ -44,7 +44,7 @@
 
 113个测试点中，通过了113-26=87个点（87/113*100%=76.99%）
 
-## PRELIMINARIES
+## 2. PRELIMINARIES
 
 > If you have any preliminary comments on your submission, notes for the TAs, or extra credit, please give them here.
 
@@ -64,9 +64,9 @@
 1. 操作系统概念(原书第9版)/(美)Abraham Silberschatz等著
 2. 原仓周老师PPT中的概念和课上讲解
 
-## 需求分析
+## 3. 需求分析
 
-### 分页部分
+### 3.1. 分页部分
 
 为从可执行文件加载的段实现分页。所有这些页面都应延迟加载（Lazily load），即仅在内核拦截它们的页面错误时才加载。在页被逐出后，将已经被修改的页（就像“dirty bit”表示的那样）写入交换页。未经修改的页面（包括只读页面）不应该被写入交换页，因为它们始终可以从可执行文件中读取。
 
@@ -80,7 +80,7 @@
 - 如果`page_zero_bytes`等于`PGSIZE`，则完全不需要从磁盘读取也买你，因为它全为零。我们应该通过在首个缺页错误时创建一个由全零组成的新页来处理此类页面。
 - 否则，`page_read_bytes`和`page_zero_bytes`都不等于`PGSIZE`。在这种情况下，将从底层文件中读取页面的初始部分，并将其余部分清零。
 
-### 栈增长
+### 3.2. 栈增长
 
 实现栈增长。在Project 2中，栈仅仅是在用户虚拟内存顶部的单独的一个页面，并且程序也因为这样的栈而受到限制。现在，如果一个栈的大小增长超过了他现在的大小，操作系统应该根据所需分配额外的页。
 
@@ -96,7 +96,7 @@
 
 所有堆栈页面都应为驱逐对象。被逐出的堆栈页面应写入交换区，**以实现类似于LRU的算法**。
 
-### 内存映射文件
+### 3.3. 内存映射文件
 
 实现内存映射文件，包括以下系统调用：
 
@@ -115,7 +115,7 @@
 
 如果两个或多个进程映射同一文件，则不要求它们看到一致的数据。Unix通过使两个映射共享相同的物理页面来处理此问题，但是mmap系统调用还具有一个参数，允许客户端指定页面是共享页面还是私有页面（即写时复制）。
 
-### 访问用户内存
+### 3.4. 访问用户内存
 
 在处理系统调用时，我们需要调整代码以访问用户内存。就像用户进程可以访问其内容当前位于文件或交换空间中的页面一样，它们也可以将引用此类非驻留页面的地址传递给系统调用。此外，除非内核采取措施防止这种情况发生，否则即使在内核代码正在访问页面的情况下，也可能会将页面从其框架中逐出。如果内核代码访问此类非驻留页面，则将缺页错误。
 
@@ -123,9 +123,9 @@
 
 要防止此类页面错误，需要在其中进行访问的代码与页面的逐出代码之间进行协作。例如，可以扩展框架表以记录框架中包含的页面何时不能被驱逐。 （这也称为“固定”或“锁定”其框架中的页面。）固定会限制页面替换算法在寻找要逐出的页面时的选择，所以要确保在不必要的时候不要进行固定处理。
 
-## QUESTION 1: PAGE TABLE MANAGEMENT
+## 4. QUESTION 1: PAGE TABLE MANAGEMENT
 
-### DATA STRUCTURES
+### 4.1. DATA STRUCTURES
 
 > A1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
@@ -147,7 +147,7 @@
 - [CHANGED] `start_process()`
   - implement 参数传递
 
-### ALGORITHMS
+### 4.2. ALGORITHMS
 
 > A2: In a few paragraphs, describe your code for accessing the data stored in the SPT about a given page.
 
@@ -157,21 +157,21 @@
 
 首先，找到用户进程虚拟地址的页面，通过找到未使用的可用页面，或释放最近未访问过的页面（通过逐出内存中的关联页面）来解决这一个问题。
 
-### SYNCHRONIZATION
+### 4.3. SYNCHRONIZATION
 
 > A4: When two user processes both need a new frame at the same time, how are races avoided?
 
 当用户进程获取内存时，用锁机制来避免。其中，每一帧都有自己的锁，表示它当前的状态是否被占用。
 
-### RATIONALE
+### 4.4. RATIONALE
 
 > A5: Why did you choose the data structure(s) that you did for representing virtual-to-physical mappings?
 
 在我们的设想中，我们的实现方式足够简约，且相对容易实现。
 
-## QUESTION 2: PAGING TO AND FROM DISK
+## 5. QUESTION 2: PAGING TO AND FROM DISK
 
-### DATA STRUCTURES
+### 5.1. DATA STRUCTURES
 
 > B1: Copy here the declaration of each new or changed `struct` or `struct` member, global or static variable, `typedef`, or enumeration.  Identify the purpose of each in 25 words or less.
 
@@ -220,7 +220,7 @@
 - [NEW] `struct list_elem elem`
   - 表示子进程状态结构体的列表元素
 
-### ALGORITHMS
+### 5.2. ALGORITHMS
 
 > B2: When a frame is required but none is free, some frame must be evicted.  Describe your code for choosing a frame to evict.
 
@@ -238,7 +238,7 @@
 
 要防止此类页错误，需要做一些检查：考察esp-32处。当发现此类错误时，我们认为，可以扩展页框来解决。
 
-### SYNCHRONIZATION
+### 5.3. SYNCHRONIZATION
 
 > B5: Explain the basics of your VM synchronization design. In particular, explain how it prevents deadlock.  (Refer to the textbook for an explanation of the necessary conditions for deadlock.)
 
@@ -258,13 +258,13 @@
 
 对于无效地址，和Project2一样，我们选择对地址进行预检查，如果不符合要求，则拒绝访问，适时退出。
 
-### RATIONALE
+### 5.4. RATIONALE
 
 > B9: A single lock for the whole VM system would make synchronization easy, but limit parallelism.  On the other hand, using many locks complicates synchronization and raises the possibility for deadlock but allows for high parallelism. Explain where your design falls along this continuum and why you chose to design it this way.
 
 我们做Pintos的实验理念是简洁、结构清晰、易实现，因此在我们的设想中，选择使用单个锁来做同步，尽管牺牲了一定的并行性，但我们认为是可以接受的。
 
-## SURVEY QUESTIONS
+## 6. SURVEY QUESTIONS
 
 Answering these questions is optional, but it will help us improve the course in future quarters. Feel free to tell us anything you want--these questions are just to spur your thoughts. You may also choose to respond anonymously in the course evaluations at the end of the quarter.
 
